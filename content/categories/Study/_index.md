@@ -1,6 +1,6 @@
 ---
-title: Example Category
-description: A description of this category
+title: Study
+description: Keep Learning!
 image:
 
 # Badge style
