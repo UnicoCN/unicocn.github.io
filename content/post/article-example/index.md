@@ -10,6 +10,6 @@ tags:
     - Tips
 ---
 
-My first post!
+My first post! An example to show to push articles.
 
 > Written by Jiacheng Hu, at Zhejiang University, Hangzhou, China.
