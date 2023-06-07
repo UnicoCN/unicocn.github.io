@@ -1,6 +1,6 @@
 ---
-title: Work
-description: Love your work. Work for your love.
+title: Experience
+description: Love your life. Live for your love.
 image:
 
 # Badge style
