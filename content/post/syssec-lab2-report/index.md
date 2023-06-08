@@ -13,11 +13,11 @@ tags:
     - Linux Kernel
 ---
 
-## ROP | Linux内核攻防
+# ROP | Linux内核攻防
 
 > Link: https://zjusec.gitee.io/syssec23-stu/lab2/
 
-### 一、Task1：绕过stack canary和KASLR
+## Task1：绕过stack canary和KASLR
 
 1. 首先根据实验指南，当我们`read`时，读取的是全局变量`prev_cmd`，而当我们`write`的时候，会将`buffer`先赋值给`cmd`，再将`cmd`赋值给`prev_cmd`；在`zjubof_write4`中，看似对`cmd.length`作出了限制，但是并没有对`len`作出限制，因此存在overflow漏洞，可以通过溢出修改`cmd.length`，进而将`canary/oldfp/ra`读到`prev_cmd`中
 
@@ -113,7 +113,7 @@ size_t getOffset(int fd) {
 
 至此，我们成功泄露了canary和offset，之后就可以通过偏移量绕过`KASLR`
 
-### 二、Task2: 修改return address，获取 root 权限
+## Task2: 修改return address，获取 root 权限
 
 1. Task2要求我们修改`ra`，跳转到`first_level_gadget`，由`first_level_gadget`实现提权；我们先反汇编一下`first_level_gadget`，发现第一行代码修改了`sp`，而修改`ra`后返回时，`sp`已经被设置好了，如果此时跳转到第一行，`sp`再次被修改，就会导致栈空间出错，进而导致程序出错，因此需要跳到第二行
 
@@ -178,7 +178,7 @@ void hackUsingFirstLevelGadget(int fd, size_t offset) {
 
 **flag：**sysde655sEc
 
-### 三、Task3: ROP 获取 root 权限
+## Task3: ROP 获取 root 权限
 
 1. 这次我们需要使用ROP进行提权，函数调用栈为
 
@@ -260,7 +260,7 @@ void hackUsingROP(int fd, size_t offset) {
 
 **flag：**sysde655sEc
 
-### 四、Task4: Linux内核对 ROP 攻击的防护
+## Task4: Linux内核对 ROP 攻击的防护
 
 1. 编译运行，之后执行exp
 
@@ -289,7 +289,7 @@ aarch64-linux-gnu-objcopy -O binary vmlinux Image --strip-all
 
 总结来说，在进入函数的时候，栈上存储的不再是返回地址，而是附带着加密后的返回地址，在离开函数时会校验这个地址的合法性，如果合法即未被篡改函数才能正常返回；同时由于攻击者无法得知密钥以及加密算法，因此攻击者无法构造出加密后的返回地址进行`buffer overflow`，也就无法进行 ROP 攻击
 
-### 五、思考题
+## 思考题
 
 1. 为什么linux canary的最低位byte总是 `\00`？
 
@@ -428,3 +428,4 @@ int main(int argc, char *argv[])
 }
 ```
 
+> Written by Jiacheng Hu, at Zhejiang University, Hangzhou, China.
