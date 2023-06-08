@@ -17,7 +17,7 @@ tags:
 
 > Link: https://zjusec.gitee.io/syssec23-stu/lab3/
 
-#### 一、思考题1
+### 一、思考题1
 
 > Q1. 为什么在堆上分配相同大小内存的时候，两次分配的内存地址会一样
 
@@ -34,7 +34,7 @@ Linux内核在堆上分配内存时，通常会使用如下系统调用
 
 因此当我们在堆上分配相同大小内存时，被free的内存被接入bin中，再次分配相同大小的内存就会从bin上分配，进而极大增加了分配到的内存地址相同的概率；这也就解释了为什么在UAF利用中，两次分配的内存地址会一样
 
-#### 二、 Task1：设备接口的使用 & 思考题2
+### 二、 Task1：设备接口的使用 & 思考题2
 
 1. 根据UAF的原理，我们先两次打开`/dev/zjudev`设备，分配并释放大小为`sizeof(tty_struct)`的缓冲区，这样做是为了之后打开`/dev/ptmx`设备，分配`tty_struct`结构体时能够分配到与`/dev/zjudev`相同地址的缓冲区
 2. 之后我们打开`/dev/ptmx`设备，并判断是否分配到了与`/dev/zjudev`相同的缓冲区；判断的方法是，我们观察`tty_struct`结构体：
@@ -107,7 +107,7 @@ int main(int argc, char* argv[]) {
 
 ```
 
-#### 三、 Task2：简单获取root shell & 思考题3
+### 三、 Task2：简单获取root shell & 思考题3
 
 1. 观察`tty_struct`结构体，我们可以发现有一个`const struct tty_operations* ops`指针，其指向的是一组可以被调用的函数指针，当我们对`/dev/ptmx`设备进行操作时，调用的就是其中的函数；`struct tty_operations`的具体结构如下：
 
@@ -205,7 +205,7 @@ int main(int argc, char* argv[]) {
 }
 ```
 
-#### 四、Task3：gadget获取root shell & 思考题4
+### 四、Task3：gadget获取root shell & 思考题4
 
 1. 在task3中我们无法直接调用`hack_cred`函数获取root权限，需要使用`gadget`，本质上就是通过`gadget`控制传参的寄存器，进而依次调用`struct cred* root_cred = prepare_kernel_cred(NULL)`和`commit_creds(root_cred)`获取root权限
 
@@ -325,7 +325,7 @@ int main(int argc, char* argv[]) {
 }
 ```
 
-#### 五、Task4：内核CFI保护
+### 五、Task4：内核CFI保护
 
 - 使用`objdump`反汇编开启CFI的内核镜像 `vmlinux`，获得汇编代码，提交任意一个间接调用的汇编代码，并详细解释CFI是如何防御JOP攻击
 
