@@ -2,7 +2,7 @@
 title: JOP | Linux内核攻防
 description: JOP | Linux kernel attack and defence
 slug: JOP
-date: 2022-06-07 23:50:00+0000
+date: 2023-06-07 23:50:00+0000
 image: cover.jpg
 categories:
     - Study
