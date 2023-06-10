@@ -1,5 +1,5 @@
 ---
-title: How to learn Golang
+title: Go语言学习路线
 description: A roadmap about how to learn Go
 slug: Go
 date: 2022-06-07 23:50:00+0000
