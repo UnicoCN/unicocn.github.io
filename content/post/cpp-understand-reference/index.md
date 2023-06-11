@@ -332,7 +332,7 @@ Reference：
 
 > The compiler treats a named rvalue reference as an lvalue and an unnamed rvalue reference as an rvalue
 > 
-左值右值和类型是独立的概念，一个右值引用类型的变量可以是左值，将右值引用作为参数的函数会将该参数视为函数体中的左值；一个右值引用类型的变量也可以是右值，比如print(forward<int>(x))的结果为print(int &&)，int &&为临时变量，故为右值
+左值右值和类型是独立的概念，一个右值引用类型的变量可以是左值，将右值引用作为参数的函数会将该参数视为函数体中的左值；一个右值引用类型的变量也可以是右值，比如`print(forward<int>(x))`的结果为`print(int &&)`，int &&为临时变量，故为右值
 
 
 具体见下面的例子：
