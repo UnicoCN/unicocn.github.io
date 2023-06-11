@@ -176,7 +176,7 @@ void hackUsingFirstLevelGadget(int fd, size_t offset) {
 
 ![image 7](image-20230529215904015.png)
 
-**flag：**sysde655sEc
+flag：sysde655sEc
 
 ## Task3: ROP 获取 root 权限
 
@@ -258,7 +258,7 @@ void hackUsingROP(int fd, size_t offset) {
 
 ![image 13](image-20230530012657947.png)
 
-**flag：**sysde655sEc
+flag：sysde655sEc
 
 ## Task4: Linux内核对 ROP 攻击的防护
 

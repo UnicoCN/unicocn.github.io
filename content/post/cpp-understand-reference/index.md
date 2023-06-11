@@ -154,6 +154,15 @@ public:
 > Perfect forwarding reduces the need for overloaded functions and helps avoid the forwarding problem. The *forwarding problem* can occur when you write a generic function that takes references as its parameters. If it passes (or *forwards*) these parameters to another function, for example, if it takes a parameter of type `const T&`, then the called function can't modify the value of that parameter. If the generic function takes a parameter of type `T&`, then the function can't be called by using an rvalue (such as a temporary object or integer literal).
 > 
 
+```cpp
+template<class T>
+void wrapper(T&& arg)
+{
+    // arg is always lvalue
+    foo(std::forward<T>(arg)); // Forward as lvalue or as rvalue, depending on T
+}
+```
+
 完美转发可以帮助人们解决转发问题：
 
 考虑一种情况，现在我们需要将一个右值作为参数传入函数，在没有右值引用的情况下该如何实现？
