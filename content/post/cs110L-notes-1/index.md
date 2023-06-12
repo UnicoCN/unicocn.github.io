@@ -20,11 +20,11 @@ tags:
 
 [CS 110L: Safety in Systems Programming](https://reberhardt.com/cs110l/spring-2020/)
 
-### My homework repo
+### My Homework Repository
 
 [GitHub - UnicoCN/learn-rust](https://github.com/UnicoCN/learn-rust/tree/main)
 
-## Lec01: why rust
+## Lec01: Why Rust
 
 - Why not C/C++?
     - Security Issue
@@ -38,7 +38,7 @@ tags:
         - Precludes manual optimization
     - can not solve memory leak completely
 
-## lec02: Memory Safety
+## Lec02: Memory Safety
 
 - Why is it so easy to screw up in C?
     - Dangling Pointers
