@@ -9,7 +9,6 @@ categories:
 tags:
     - C++
     - Technology
-    - Programming Language
 ---
 
 # 理解万能引用 | 左值引用 | 右值引用

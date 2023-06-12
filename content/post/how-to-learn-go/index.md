@@ -8,8 +8,8 @@ categories:
     - Study
 tags:
     - Go
-    - Programming Language
     - Technology
+    - Tutorial
 ---
 
 # 如何学习Golang

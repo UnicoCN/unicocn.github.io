@@ -9,7 +9,6 @@ categories:
 tags:
     - C++
     - Technology
-    - Programming Language
 ---
 
 

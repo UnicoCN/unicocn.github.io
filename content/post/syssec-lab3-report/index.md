@@ -10,7 +10,7 @@ tags:
     - JOP
     - Security
     - Technology
-    - Linux Kernel
+    - Linux
 ---
 
 # Lab3 JOP | Linux内核漏洞攻防

@@ -10,7 +10,7 @@ tags:
     - ROP
     - Security
     - Technology
-    - Linux Kernel
+    - Linux
 ---
 
 # ROP | Linux内核攻防
