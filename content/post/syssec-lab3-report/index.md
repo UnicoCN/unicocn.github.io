@@ -7,7 +7,6 @@ image: cover.jpg
 categories:
     - Study
 tags:
-    - JOP
     - Security
     - Technology
     - Linux

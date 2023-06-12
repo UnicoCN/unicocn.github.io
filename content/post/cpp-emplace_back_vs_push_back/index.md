@@ -12,7 +12,7 @@ tags:
 ---
 
 
-# 什么是push_back和emplace_back
+## 什么是push_back和emplace_back
 
 - push_back和emplace_back是C++11引入的成员函数，用于对vector容器的末尾进行添加元素
 - push_back的函数签名
@@ -30,7 +30,7 @@ tags:
 | template< class... Args >reference emplace_back( Args&&... args ); | (since C++17) (until C++20) |
 | template< class... Args >constexpr reference emplace_back( Args&&... args ); | (since C++20) |
 
-# push_back和emplace_back的异同点
+## push_back和emplace_back的异同点
 
 1. push_back仅支持传入一个参数，而emplace_back支持传入一个可变参数列表
 2. push_back支持传入左值（常量左值引用捕获）和右值（右值引用捕获），emplace_back也支持传入左值和右值
@@ -39,7 +39,7 @@ tags:
 5. emplace_back可以传入构造函数所需的一系列参数，支持in-place construct，而push_back不支持，因此若传入构造函数所需的一系列参数，则只会调用一次constructor（详见例子）
 6. insert和emplace的异同和push_back和emplace_back类似
 
-# 常见误区
+## 常见误区
 
 1. emplace_back相比于push_back可以提升效率，原因是可以减少不必要的构造函数调用
 
@@ -49,7 +49,7 @@ tags:
 
 从函数签名可以看到push_back也是支持右值引用的，同时也支持移动语义（调用移动构造函数）
 
-# 例子
+## 例子
 
 ```cpp
 #include <vector>
@@ -111,7 +111,7 @@ Franklin Delano Roosevelt was re-elected president of the USA in 1936.
 ```
 
 
-# Reference
+## Reference
 
 [std::vector<T,Allocator>::push_back - cppreference.com](https://en.cppreference.com/w/cpp/container/vector/push_back)
 

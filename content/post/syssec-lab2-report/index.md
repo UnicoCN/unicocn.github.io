@@ -7,7 +7,6 @@ image: cover.jpg
 categories:
     - Study
 tags:
-    - ROP
     - Security
     - Technology
     - Linux
