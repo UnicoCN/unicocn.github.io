@@ -15,7 +15,7 @@ tags:
 # ChatGPT 使用手册（持续更新）
 
 > ChatGPT正在改变这个世界，对于身处时代剧变中的个体，利用好这个强大的AI助手，可以极大地提高自身学习效率和生产力 \
-> 本文受@[西西弗斯没问题](https://space.bilibili.com/277830177) 启发，部分内容参考了[玩转ChatGPT](https://k5ms77k0o1.feishu.cn/wiki/wikcnJyI9wsyjyBc8xiDgv0cY8b)，参考内容均已注明
+> 本文受@[西西弗斯没问题](https://space.bilibili.com/277830177) 启发，部分内容参考了[玩转ChatGPT](https://k5ms77k0o1.feishu.cn/wiki/wikcnJyI9wsyjyBc8xiDgv0cY8b)
 >
 
 ## ChatGPT使用渠道
@@ -35,7 +35,7 @@ tags:
 
 ### ChatGPT Prompt Engineering for Developers By Andrew Ng
 
-[课程链接: ChatGPT Prompt Engineering for Developers](https://www.deeplearning.ai/short-courses/chatgpt-prompt-engineering-for-developers/)
+[Link: ChatGPT Prompt Engineering for Developers](https://www.deeplearning.ai/short-courses/chatgpt-prompt-engineering-for-developers/)
 
 ## 效率Up Up! 
 
