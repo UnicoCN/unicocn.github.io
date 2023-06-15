@@ -2,7 +2,7 @@
 title: 生产力提高指南 —— ChatGPT使用手册
 description: Improve your productivity —— ChatGPT Tutorial
 slug: chatgpt-tutorial
-date: 2023-06-12 12:00:00+0000
+date: 2023-06-13 12:00:00+0000
 image: cover.jpg
 categories:
     - Experience
