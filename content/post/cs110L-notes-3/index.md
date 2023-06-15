@@ -1,6 +1,6 @@
 ---
 title: Stanford CS110L Notes 3
-description: Stanford CS110L Notes lec03
+description: Stanford CS110L Notes lec04
 slug: rust-cs110l-notes-3
 date: 2023-06-15 00:00:00+0000
 image: cover.png
