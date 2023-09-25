@@ -1,0 +1,330 @@
+<!doctype html><html lang=en dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><meta name=description content="Understand universal reference | lvalue reference | rvalue reference"><title>理解万能引用｜左值引用｜右值引用</title><link rel=canonical href=https://unicocn.github.io/p/cpp-understand-reference/><link rel=stylesheet href=/scss/style.min.abbd69b2908fdfcd5179898beaafd374514a86538d81639ddd2c58c06ae54e40.css><meta property="og:title" content="理解万能引用｜左值引用｜右值引用"><meta property="og:description" content="Understand universal reference | lvalue reference | rvalue reference"><meta property="og:url" content="https://unicocn.github.io/p/cpp-understand-reference/"><meta property="og:site_name" content="Jiacheng Hu"><meta property="og:type" content="article"><meta property="article:section" content="Post"><meta property="article:tag" content="C++"><meta property="article:tag" content="Technology"><meta property="article:published_time" content="2023-06-10T10:00:00+00:00"><meta property="article:modified_time" content="2023-06-10T10:00:00+00:00"><meta property="og:image" content="https://unicocn.github.io/p/cpp-understand-reference/cover.png"><meta name=twitter:title content="理解万能引用｜左值引用｜右值引用"><meta name=twitter:description content="Understand universal reference | lvalue reference | rvalue reference"><meta name=twitter:card content="summary_large_image"><meta name=twitter:image content="https://unicocn.github.io/p/cpp-understand-reference/cover.png"><link rel="shortcut icon" href=/favicon.ico></head><body class=article-page><script>(function(){const e="StackColorScheme";localStorage.getItem(e)||localStorage.setItem(e,"auto")})()</script><script>(function(){const t="StackColorScheme",e=localStorage.getItem(t),n=window.matchMedia("(prefers-color-scheme: dark)").matches===!0;e=="dark"||e==="auto"&&n?document.documentElement.dataset.scheme="dark":document.documentElement.dataset.scheme="light"})()</script><div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky"><button class="hamburger hamburger--spin" type=button id=toggle-menu aria-label="Toggle Menu">
+<span class=hamburger-box><span class=hamburger-inner></span></span></button><header><figure class=site-avatar><a href=/><img src=/img/avatar_hu1d23554e556787a34573de33aaa6d534_25919_300x0_resize_box_3.png width=300 height=300 class=site-logo loading=lazy alt=Avatar></a>
+<span class=emoji>🇨🇳</span></figure><div class=site-meta><h1 class=site-name><a href=/>Jiacheng Hu</a></h1><h2 class=site-description>Student - Backend Developer - Blogger</h2></div></header><ol class=social-menu><li><a href=https://github.com/UnicoCN target=_blank title=GitHub rel=me><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6.0 00-1.3-3.2 4.2 4.2.0 00-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3.0 00-6.2.0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2.0 00-.1 3.2A4.6 4.6.0 004 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/></svg></a></li></ol><ol class=menu id=main-menu><li><a href=/><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><polyline points="5 12 3 12 12 3 21 12 19 12"/><path d="M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/><path d="M9 21v-6a2 2 0 012-2h2a2 2 0 012 2v6"/></svg><span>Home</span></a></li><li><a href=/archives/><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><rect x="3" y="4" width="18" height="4" rx="2"/><path d="M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8"/><line x1="10" y1="12" x2="14" y2="12"/></svg><span>Archives</span></a></li><li><a href=/search/><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="10" cy="10" r="7"/><line x1="21" y1="21" x2="15" y2="15"/></svg><span>Search</span></a></li><li><a href=/about-me/><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M10 14a3.5 3.5.0 005 0l4-4a3.5 3.5.0 00-5-5l-.5.5"/><path d="M14 10a3.5 3.5.0 00-5 0l-4 4a3.5 3.5.0 005 5l.5-.5"/></svg><span>About Me</span></a></li><div class=menu-bottom-section><li id=dark-mode-toggle><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="8" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="16" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg><span>Dark Mode</span></li></div></ol></aside><aside class="sidebar right-sidebar sticky"><section class="widget archives"><div class=widget-icon><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><line x1="5" y1="9" x2="19" y2="9"/><line x1="5" y1="15" x2="19" y2="15"/><line x1="11" y1="4" x2="7" y2="20"/><line x1="17" y1="4" x2="13" y2="20"/></svg></div><h2 class="widget-title section-title">Table of contents</h2><div class=widget--toc><nav id=TableOfContents><ol><li><a href=#左值和右值>左值和右值</a></li><li><a href=#左值引用和右值引用>左值引用和右值引用</a><ol><li><a href=#左值引用>左值引用</a></li><li><a href=#右值引用>右值引用</a><ol><li><a href=#移动语义>移动语义</a></li><li><a href=#完美转发>完美转发</a></li></ol></li></ol></li><li><a href=#万能引用和引用折叠>万能引用和引用折叠</a></li><li><a href=#常见误区->常见误区 🌟</a><ol><li><a href=#某个变量的类型是左值右值>某个变量的类型是左值右值</a></li><li><a href=#使用右值引用一定可以减少内存拷贝>使用右值引用一定可以减少内存拷贝</a></li><li><a href=#左值引用类型的变量是左值右值引用类型的变量是右值函数的参数为左值右值引用类型他们在函数体中就是左值右值>左值引用类型的变量是左值，右值引用类型的变量是右值；函数的参数为左值/右值引用类型，他们在函数体中就是左值/右值</a></li></ol></li></ol></nav></div></section></aside><main class="main full-width"><article class="has-image main-article"><header class=article-header><div class=article-image><a href=/p/cpp-understand-reference/><img src=/p/cpp-understand-reference/cover_hu6170f1f82b3711c204643e7d26f97db9_36645_800x0_resize_box_3.png srcset="/p/cpp-understand-reference/cover_hu6170f1f82b3711c204643e7d26f97db9_36645_800x0_resize_box_3.png 800w, /p/cpp-understand-reference/cover_hu6170f1f82b3711c204643e7d26f97db9_36645_1600x0_resize_box_3.png 1600w" width=800 height=273 loading=lazy alt="Featured image of post 理解万能引用｜左值引用｜右值引用"></a></div><div class=article-details><header class=article-category><a href=/categories/study/ style=background-color:#2a9d8f;color:#fff>Study</a></header><div class=article-title-wrapper><h2 class=article-title><a href=/p/cpp-understand-reference/>理解万能引用｜左值引用｜右值引用</a></h2><h3 class=article-subtitle>Understand universal reference | lvalue reference | rvalue reference</h3></div><footer class=article-time><div><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M11.795 21H5a2 2 0 01-2-2V7a2 2 0 012-2h12a2 2 0 012 2v4"/><circle cx="18" cy="18" r="4"/><path d="M15 3v4"/><path d="M7 3v4"/><path d="M3 11h16"/><path d="M18 16.496V18l1 1"/></svg><time class=article-time--published>Jun 10, 2023</time></div><div><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg><time class=article-time--reading>8 minute read</time></div></footer></div></header><section class=article-content><h1 id=理解万能引用--左值引用--右值引用>理解万能引用 | 左值引用 | 右值引用</h1><blockquote><p>在写C++代码时，被万能引用、左值引用和右值引用的问题困扰了很久，于是花了点时间整理了相关概念，并做了一个总结</p></blockquote><h2 id=左值和右值>左值和右值</h2><blockquote><p>The original definition of lvalues and rvalues from the earliest days of C is as follows: An <em>lvalue</em> is an expression <code>e</code> that may appear on the left or on the right hand side of an assignment, whereas an <em>rvalue</em> is an expression that can only appear on the right hand side of an assignment.</p></blockquote><p>最初，左值和右值的概念来自C，左值是可以出现在赋值语句左侧和右侧的表达式，右值是仅能出现在赋值语句右边的表达式</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-cpp data-lang=cpp><span class=line><span class=cl><span class=kt>int</span> <span class=n>a</span> <span class=o>=</span> <span class=mi>42</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=kt>int</span> <span class=n>b</span> <span class=o>=</span> <span class=mi>43</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=c1>// a and b are both lvalues:
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=n>a</span> <span class=o>=</span> <span class=n>b</span><span class=p>;</span> <span class=c1>// ok
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=n>b</span> <span class=o>=</span> <span class=n>a</span><span class=p>;</span> <span class=c1>// ok
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=n>a</span> <span class=o>=</span> <span class=n>a</span> <span class=o>*</span> <span class=n>b</span><span class=p>;</span> <span class=c1>// ok
+</span></span></span><span class=line><span class=cl><span class=c1></span>
+</span></span><span class=line><span class=cl><span class=c1>// a * b is an rvalue:
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=kt>int</span> <span class=n>c</span> <span class=o>=</span> <span class=n>a</span> <span class=o>*</span> <span class=n>b</span><span class=p>;</span> <span class=c1>// ok, rvalue on right hand side of assignment
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=n>a</span> <span class=o>*</span> <span class=n>b</span> <span class=o>=</span> <span class=mi>42</span><span class=p>;</span> <span class=c1>// error, rvalue on left hand side of assignment
+</span></span></span></code></pre></td></tr></table></div></div><blockquote><p>左值右值不仅仅指一个变量，严格来说是指一个表达式，例如 x++、a*b；事实上对编译器来说，一个变量也被当作一个表达式</p></blockquote><p>在之后的C++中，由于引入了面向对象特性以及更为复杂的赋值方式，左值右值的概念进行了拓展；尽管很难对左值右值下一个准确的定义，但是在绝大多数情况下，可以通过下面的方法对二者进行区分：</p><blockquote><p>An <em>lvalue</em> is an expression that refers to a memory location and allows us to take the address of that memory location via the <code>&</code> operator. An <em>rvalue</em> is an expression that is not an lvalue</p></blockquote><p>左值是拥有一个程序可以访问的地址的表达式，允许我们通过 & 运算符获取该地址；如果一个表达式不是左值，那它就是右值</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-cpp data-lang=cpp><span class=line><span class=cl><span class=kt>int</span> <span class=n>i</span><span class=p>,</span> <span class=n>j</span><span class=p>,</span> <span class=o>*</span><span class=n>p</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=c1>// Correct usage: 
+</span></span></span><span class=line><span class=cl><span class=c1>// the variable i is an lvalue and the literal 7 is a rvalue.
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=n>i</span> <span class=o>=</span> <span class=mi>7</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=c1>// Incorrect usage: 
+</span></span></span><span class=line><span class=cl><span class=c1>// The left operand must be an lvalue (C2106). `j * 4` is a rvalue.
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=mi>7</span> <span class=o>=</span> <span class=n>i</span><span class=p>;</span> <span class=c1>// C2106
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=n>j</span> <span class=o>*</span> <span class=mi>4</span> <span class=o>=</span> <span class=mi>7</span><span class=p>;</span> <span class=c1>// C2106
+</span></span></span><span class=line><span class=cl><span class=c1>// Correct usage: the dereferenced pointer is an lvalue.
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=o>*</span><span class=n>p</span> <span class=o>=</span> <span class=n>i</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=c1>// Correct usage: the conditional operator returns an lvalue.
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=p>((</span><span class=n>i</span> <span class=o>&lt;</span> <span class=mi>3</span><span class=p>)</span> <span class=o>?</span> <span class=nl>i</span> <span class=p>:</span> <span class=n>j</span><span class=p>)</span> <span class=o>=</span> <span class=mi>7</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=c1>// Incorrect usage: the constant ci is a non-modifiable lvalue (C3892).
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=k>const</span> <span class=kt>int</span> <span class=n>ci</span> <span class=o>=</span> <span class=mi>7</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=n>ci</span> <span class=o>=</span> <span class=mi>9</span><span class=p>;</span> <span class=c1>// C3892
+</span></span></span></code></pre></td></tr></table></div></div><blockquote><p>If the type of an expression is an lvalue reference (e.g., <code>T&</code> or <code>const T&</code>, etc.), that expression is an lvalue.</p></blockquote><p>特别注意，左值引用和常量左值引用也是左值（无论是否为临时对象，比较反直觉），而右值引用可以是左值也可以是右值，区别在于是否是临时对象</p><p>事实上C++中有一个专门的词<em>value category</em>，用来形容表达式的左右值特性，同时对此进行了更为具体的划分(since C++17)</p><ul><li>glvalue：广义左值</li><li>rvalue：右值</li><li>lvalue：左值</li><li>xvalue：将亡值</li><li>prvalue：纯右值</li></ul><p><img src=/p/cpp-understand-reference/image1.png width=275 height=135 srcset="/p/cpp-understand-reference/image1_hub6539f3baa20a74de7d272149c74b186_6877_480x0_resize_box_3.png 480w, /p/cpp-understand-reference/image1_hub6539f3baa20a74de7d272149c74b186_6877_1024x0_resize_box_3.png 1024w" loading=lazy alt="C++ value category" class=gallery-image data-flex-grow=203 data-flex-basis=488px></p><p>由于<em>value category</em>的细节比较复杂，详细内容可以参考下面的链接：</p><p><a class=link href="https://learn.microsoft.com/en-us/cpp/cpp/lvalues-and-rvalues-visual-cpp?view=msvc-170" target=_blank rel=noopener>Value Categories: Lvalues and Rvalues (C++)</a></p><p><a class=link href=https://en.cppreference.com/w/cpp/language/value_category target=_blank rel=noopener>Value categories - cppreference.com</a></p><p>Reference：</p><p><a class=link href=http://thbecker.net/articles/rvalue_references/section_01.html target=_blank rel=noopener>C++ Rvalue References Explained</a></p><h2 id=左值引用和右值引用>左值引用和右值引用</h2><h3 id=左值引用>左值引用</h3><blockquote><p>If<code>X</code>is any type, then<code>X&</code>is called an <em>lvalue reference</em> to<code>X</code>.
+It holds the address of an object but behaves syntactically like an object</p></blockquote><p>左值引用可以被当作一种替代指针的<em>syntax sugar</em>，但是由于其声明时必须绑定一个对象，且不可以更换绑定对象，因此相比裸指针具有更强的内存安全保障；同时左值引用被用作拷贝构造和拷贝赋值</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-cpp data-lang=cpp><span class=line><span class=cl><span class=k>class</span> <span class=nc>Window</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl><span class=k>public</span><span class=o>:</span>
+</span></span><span class=line><span class=cl>    <span class=n>Window</span><span class=p>(</span> <span class=k>const</span> <span class=n>Window</span><span class=o>&amp;</span> <span class=p>);</span>            <span class=c1>// Declare copy constructor.
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=n>Window</span><span class=o>&amp;</span> <span class=k>operator</span><span class=o>=</span><span class=p>(</span><span class=k>const</span> <span class=n>Window</span><span class=o>&amp;</span> <span class=n>x</span><span class=p>);</span> <span class=c1>// Declare copy assignment.
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=c1>// ...
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=p>};</span>
+</span></span></code></pre></td></tr></table></div></div><p>左值引用可以绑定左值，不可以绑定常量左值和右值</p><p>常量左值引用可以绑定左值、常量左值和右值</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span><span class=lnt>7
+</span><span class=lnt>8
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-cpp data-lang=cpp><span class=line><span class=cl><span class=kt>int</span> <span class=n>a</span> <span class=o>=</span> <span class=mi>1</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=k>const</span> <span class=kt>int</span> <span class=n>b</span> <span class=o>=</span> <span class=mi>1</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=kt>int</span><span class=o>&amp;</span> <span class=n>c</span> <span class=o>=</span> <span class=mi>1</span><span class=p>;</span> <span class=c1>// incorrect
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=kt>int</span><span class=o>&amp;</span> <span class=n>d</span> <span class=o>=</span> <span class=n>a</span><span class=p>;</span> <span class=c1>// correct
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=kt>int</span><span class=o>&amp;</span> <span class=n>e</span> <span class=o>=</span> <span class=n>b</span><span class=p>;</span> <span class=c1>// incorrect
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=k>const</span> <span class=kt>int</span><span class=o>&amp;</span> <span class=n>f</span> <span class=o>=</span> <span class=n>a</span><span class=p>;</span> <span class=c1>// correct
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=k>const</span> <span class=kt>int</span><span class=o>&amp;</span> <span class=n>g</span> <span class=o>=</span> <span class=n>b</span><span class=p>;</span> <span class=c1>// correct
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=k>const</span> <span class=kt>int</span><span class=o>&amp;</span> <span class=n>h</span> <span class=o>=</span> <span class=mi>1</span><span class=p>;</span> <span class=c1>// correct
+</span></span></span></code></pre></td></tr></table></div></div><h3 id=右值引用>右值引用</h3><blockquote><p>If<code>X</code>is any type, then<code>X&&</code>is called an <em>rvalue reference</em>to<code>X</code></p></blockquote><p>右值引用可以理解为绑定右值的引用，且右值引用仅能绑定右值</p><blockquote><p>Rvalue references enable you to distinguish an lvalue from an rvalue</p></blockquote><p>右值引用的引入基于两种需求</p><h4 id=移动语义>移动语义</h4><p>当人们希望将对象B赋值给对象A时，左值引用带来的拷贝特性能够帮助实现这一功能；但是为了提升效率，当对象B在赋值给对象A之后就不再被使用，那么完全可以将对象B的资源转移给对象A（底层通过指针的方式实现），进而避免拷贝的资源消耗，人们称之为移动语义；需要注意，在将对象B的资源转移给对象A后，就不应该再使用对象B</p><p>我们可以通过移动构造和移动赋值两种方式实现移动语义</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-cpp data-lang=cpp><span class=line><span class=cl><span class=k>class</span> <span class=nc>Window</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl><span class=k>public</span><span class=o>:</span>
+</span></span><span class=line><span class=cl>    <span class=n>Window</span><span class=p>(</span><span class=n>Window</span><span class=o>&amp;&amp;</span> <span class=p>)</span> <span class=k>noexcept</span><span class=p>;</span>            <span class=c1>// Declare move constructor.
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=n>Window</span><span class=o>&amp;</span> <span class=k>operator</span><span class=o>=</span><span class=p>(</span><span class=n>Window</span><span class=o>&amp;&amp;</span> <span class=n>x</span><span class=p>)</span> <span class=k>noexcept</span><span class=p>;</span> <span class=c1>// Declare move assignment.
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=c1>// ...
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=p>};</span>
+</span></span></code></pre></td></tr></table></div></div><h4 id=完美转发>完美转发</h4><blockquote><p>Perfect forwarding reduces the need for overloaded functions and helps avoid the forwarding problem. The <em>forwarding problem</em> can occur when you write a generic function that takes references as its parameters. If it passes (or <em>forwards</em>) these parameters to another function, for example, if it takes a parameter of type <code>const T&</code>, then the called function can&rsquo;t modify the value of that parameter. If the generic function takes a parameter of type <code>T&</code>, then the function can&rsquo;t be called by using an rvalue (such as a temporary object or integer literal).</p></blockquote><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-cpp data-lang=cpp><span class=line><span class=cl><span class=k>template</span><span class=o>&lt;</span><span class=k>class</span> <span class=nc>T</span><span class=o>&gt;</span>
+</span></span><span class=line><span class=cl><span class=kt>void</span> <span class=n>wrapper</span><span class=p>(</span><span class=n>T</span><span class=o>&amp;&amp;</span> <span class=n>arg</span><span class=p>)</span>
+</span></span><span class=line><span class=cl><span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=c1>// arg is always lvalue
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=n>foo</span><span class=p>(</span><span class=n>std</span><span class=o>::</span><span class=n>forward</span><span class=o>&lt;</span><span class=n>T</span><span class=o>&gt;</span><span class=p>(</span><span class=n>arg</span><span class=p>));</span> <span class=c1>// Forward as lvalue or as rvalue, depending on T
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><p>完美转发可以帮助人们解决转发问题：</p><p>考虑一种情况，现在我们需要将一个右值作为参数传入函数，在没有右值引用的情况下该如何实现？</p><p>首先左值引用无法绑定右值，因此无法使用左值引用；常量左值引用尽管可以绑定右值，但是由于常量，在函数体中就无法对参数进行修改</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-cpp data-lang=cpp><span class=line><span class=cl><span class=c1>// forward的具体实现，本质是类型转换
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=k>template</span><span class=o>&lt;</span><span class=k>typename</span> <span class=n>_Tp</span><span class=o>&gt;</span>
+</span></span><span class=line><span class=cl><span class=k>constexpr</span> <span class=n>_Tp</span><span class=o>&amp;&amp;</span> <span class=n>forward</span><span class=p>(</span><span class=k>typename</span> <span class=n>std</span><span class=o>::</span><span class=n>remove_reference</span><span class=o>&lt;</span><span class=n>_Tp</span><span class=o>&gt;::</span><span class=n>type</span><span class=o>&amp;</span> <span class=n>__t</span><span class=p>)</span> <span class=k>noexcept</span>
+</span></span><span class=line><span class=cl><span class=p>{</span> <span class=k>return</span> <span class=k>static_cast</span><span class=o>&lt;</span><span class=n>_Tp</span><span class=o>&amp;&amp;&gt;</span><span class=p>(</span><span class=n>__t</span><span class=p>);</span> <span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><p>基于上面两种需求，人们需要一种新的不同于左值引用的方式，使得能够实现移动语义和完美转发，因此也就引入了右值引用</p><p>Reference：</p><p><a class=link href="https://learn.microsoft.com/en-us/cpp/cpp/lvalue-reference-declarator-amp?view=msvc-170" target=_blank rel=noopener>Lvalue reference declarator: &</a></p><p><a class=link href="https://learn.microsoft.com/en-us/cpp/cpp/rvalue-reference-declarator-amp-amp?view=msvc-170" target=_blank rel=noopener>Rvalue reference declarator: &&</a></p><p><a class=link href=https://zhuanlan.zhihu.com/p/369203981 target=_blank rel=noopener>谈谈完美转发(Perfect Forwarding)：完美转发 = 引用折叠 + 万能引用 + std::forward</a></p><p><a class=link href=https://en.cppreference.com/w/cpp/language/copy_constructor target=_blank rel=noopener>Copy constructors - cppreference.com</a></p><p><a class=link href=https://en.cppreference.com/w/cpp/language/move_constructor target=_blank rel=noopener>Move constructors - cppreference.com</a></p><h2 id=万能引用和引用折叠>万能引用和引用折叠</h2><p>声明右值引用使用的符号为<code>&&</code>，但是使用<code>&&</code>符号的却不一定是右值引用，这也是C++程序中非常令人困惑的一点</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span><span class=lnt>7
+</span><span class=lnt>8
+</span><span class=lnt>9
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-cpp data-lang=cpp><span class=line><span class=cl><span class=n>Widget</span><span class=o>&amp;&amp;</span> <span class=n>var1</span> <span class=o>=</span> <span class=n>someWidget</span><span class=p>;</span>      <span class=c1>// here, “&amp;&amp;” means rvalue reference
+</span></span></span><span class=line><span class=cl><span class=c1></span> 
+</span></span><span class=line><span class=cl><span class=k>auto</span><span class=o>&amp;&amp;</span> <span class=n>var2</span> <span class=o>=</span> <span class=n>var1</span><span class=p>;</span>              <span class=c1>// here, “&amp;&amp;” does not mean rvalue reference
+</span></span></span><span class=line><span class=cl><span class=c1></span> 
+</span></span><span class=line><span class=cl><span class=k>template</span><span class=o>&lt;</span><span class=k>typename</span> <span class=n>T</span><span class=o>&gt;</span>
+</span></span><span class=line><span class=cl><span class=kt>void</span> <span class=n>f</span><span class=p>(</span><span class=n>std</span><span class=o>::</span><span class=n>vector</span><span class=o>&lt;</span><span class=n>T</span><span class=o>&gt;&amp;&amp;</span> <span class=n>param</span><span class=p>);</span>  <span class=c1>// here, “&amp;&amp;” means rvalue reference
+</span></span></span><span class=line><span class=cl><span class=c1></span> 
+</span></span><span class=line><span class=cl><span class=k>template</span><span class=o>&lt;</span><span class=k>typename</span> <span class=n>T</span><span class=o>&gt;</span>
+</span></span><span class=line><span class=cl><span class=kt>void</span> <span class=n>f</span><span class=p>(</span><span class=n>T</span><span class=o>&amp;&amp;</span> <span class=n>param</span><span class=p>);</span>               <span class=c1>// here, “&amp;&amp;”does not mean rvalue reference
+</span></span></span></code></pre></td></tr></table></div></div><blockquote><p>The essence of the issue is that “<code>&&</code>” in a type declaration sometimes means rvalue reference, but sometimes it means <em>either</em> rvalue reference <em>or</em> lvalue reference. As such, some occurrences of “<code>&&</code>” in source code may actually have the meaning of “<code>&</code>”, i.e., have the syntactic <em>appearance</em> of an rvalue reference (“<code>&&</code>”), but the <em>meaning</em> of an lvalue reference (“<code>&</code>”).</p></blockquote><p>在一些时候，<code>&&</code> 既可以绑定左值，也可以绑定右值，人们称其为万能引用(universal reference)</p><p>注：事实上在cpp reference中，并没有universal reference的称呼，其中共定义了四种引用，分别是lvalue reference、rvalue reference、forwarding reference以及dangling reference，其中forwarding reference就是universal reference，可以参考下面链接中的回答</p><p><a class=link href=https://stackoverflow.com/questions/39552272/is-there-a-difference-between-universal-references-and-forwarding-references target=_blank rel=noopener>Is there a difference between universal references and forwarding references?</a></p><ul><li>什么时候<code>&&</code> 表示万能引用</li></ul><blockquote><p>If a variable or parameter is declared to have type <strong><code>T&&</code></strong> for some <strong>deduced type</strong> <code>T</code>, that variable or parameter is a <em>universal reference</em>.</p></blockquote><p>如果一个变量或者参数被声明为<strong>T&&</strong>，其中T是<strong>被推导</strong>的类型，那这个变量或者参数就是一个万能引用，形如<code>auto&&</code> 、<code>T&&</code> ，注意T需要是被推导的类型</p><p>例如下面的例子：</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span><span class=lnt>35
+</span><span class=lnt>36
+</span><span class=lnt>37
+</span><span class=lnt>38
+</span><span class=lnt>39
+</span><span class=lnt>40
+</span><span class=lnt>41
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-cpp data-lang=cpp><span class=line><span class=cl><span class=k>template</span><span class=o>&lt;</span><span class=k>typename</span> <span class=n>T</span><span class=o>&gt;</span>
+</span></span><span class=line><span class=cl><span class=kt>void</span> <span class=n>f</span><span class=p>(</span><span class=n>T</span><span class=o>&amp;&amp;</span> <span class=n>param</span><span class=p>);</span>               <span class=c1>// deduced parameter type ⇒ type deduction;
+</span></span></span><span class=line><span class=cl><span class=c1></span>                                 <span class=c1>// &amp;&amp; ≡ universal reference
+</span></span></span><span class=line><span class=cl><span class=c1></span> 
+</span></span><span class=line><span class=cl><span class=k>template</span><span class=o>&lt;</span><span class=k>typename</span> <span class=n>T</span><span class=o>&gt;</span>
+</span></span><span class=line><span class=cl><span class=k>class</span> <span class=nc>Widget</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=p>...</span>
+</span></span><span class=line><span class=cl>    <span class=n>Widget</span><span class=p>(</span><span class=n>Widget</span><span class=o>&amp;&amp;</span> <span class=n>rhs</span><span class=p>);</span>        <span class=c1>// fully specified parameter type ⇒ no type deduction;
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=p>...</span>                          <span class=c1>// &amp;&amp; ≡ rvalue reference
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=p>};</span>
+</span></span><span class=line><span class=cl> 
+</span></span><span class=line><span class=cl><span class=k>template</span><span class=o>&lt;</span><span class=k>typename</span> <span class=n>T1</span><span class=o>&gt;</span>
+</span></span><span class=line><span class=cl><span class=k>class</span> <span class=nc>Gadget</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=p>...</span>
+</span></span><span class=line><span class=cl>    <span class=k>template</span><span class=o>&lt;</span><span class=k>typename</span> <span class=n>T2</span><span class=o>&gt;</span>
+</span></span><span class=line><span class=cl>    <span class=n>Gadget</span><span class=p>(</span><span class=n>T2</span><span class=o>&amp;&amp;</span> <span class=n>rhs</span><span class=p>);</span>            <span class=c1>// deduced parameter type ⇒ type deduction;
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=p>...</span>                          <span class=c1>// &amp;&amp; ≡ universal reference
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=p>};</span>
+</span></span><span class=line><span class=cl> 
+</span></span><span class=line><span class=cl><span class=kt>void</span> <span class=nf>f</span><span class=p>(</span><span class=n>Widget</span><span class=o>&amp;&amp;</span> <span class=n>param</span><span class=p>);</span>          <span class=c1>// fully specified parameter type ⇒ no type deduction;
+</span></span></span><span class=line><span class=cl><span class=c1></span>                                 <span class=c1>// &amp;&amp; ≡ rvalue reference
+</span></span></span><span class=line><span class=cl><span class=c1></span>
+</span></span><span class=line><span class=cl><span class=c1>// push_back can’t exist without the class std::vector&lt;T&gt; that contains it.  
+</span></span></span><span class=line><span class=cl><span class=c1>// But if we have a class std::vector&lt;T&gt;, we already know what T is
+</span></span></span><span class=line><span class=cl><span class=c1>// so there’s no need to deduce it.
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=k>template</span> <span class=o>&lt;</span><span class=k>class</span> <span class=nc>T</span><span class=o>&gt;</span>
+</span></span><span class=line><span class=cl><span class=k>class</span> <span class=nc>vector</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl><span class=k>public</span><span class=o>:</span>
+</span></span><span class=line><span class=cl>    <span class=p>...</span>
+</span></span><span class=line><span class=cl>    <span class=kt>void</span> <span class=n>push_back</span><span class=p>(</span><span class=n>T</span><span class=o>&amp;&amp;</span> <span class=n>x</span><span class=p>);</span>       <span class=c1>// fully specified parameter type ⇒ no type deduction;
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=p>...</span>                          <span class=c1>// &amp;&amp; ≡ rvalue reference
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=p>};</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=k>template</span> <span class=o>&lt;</span><span class=k>class</span> <span class=nc>T</span><span class=p>,</span> <span class=k>class</span> <span class=nc>Allocator</span> <span class=o>=</span> <span class=n>allocator</span><span class=o>&lt;</span><span class=n>T</span><span class=o>&gt;</span> <span class=o>&gt;</span>
+</span></span><span class=line><span class=cl><span class=k>class</span> <span class=nc>vector</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl><span class=k>public</span><span class=o>:</span>
+</span></span><span class=line><span class=cl>    <span class=p>...</span>
+</span></span><span class=line><span class=cl>    <span class=k>template</span> <span class=o>&lt;</span><span class=k>class</span><span class=err>... </span><span class=nc>Args</span><span class=o>&gt;</span>
+</span></span><span class=line><span class=cl>    <span class=kt>void</span> <span class=n>emplace_back</span><span class=p>(</span><span class=n>Args</span><span class=o>&amp;&amp;</span><span class=p>...</span> <span class=n>args</span><span class=p>);</span> <span class=c1>// deduced parameter types ⇒ type deduction;
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=p>...</span>                                <span class=c1>// &amp;&amp; ≡ universal references
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=p>};</span>
+</span></span></code></pre></td></tr></table></div></div><ul><li>万能引用什么时候表示左值？什么时候表示右值？<ul><li>If the expression initializing a universal reference is an lvalue, the universal reference becomes an lvalue reference. (T& && → T&)</li><li>If the expression initializing the universal reference is an rvalue, the universal reference becomes an rvalue reference. (T && → T&&而不是T&& && → T&&)</li></ul></li></ul><p>此时我们可以发现一个问题，参考如下代码</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span><span class=lnt>7
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-cpp data-lang=cpp><span class=line><span class=cl><span class=k>template</span><span class=o>&lt;</span><span class=k>typename</span> <span class=n>T</span><span class=o>&gt;</span>
+</span></span><span class=line><span class=cl><span class=kt>void</span> <span class=n>f</span><span class=p>(</span><span class=n>T</span><span class=o>&amp;&amp;</span> <span class=n>param</span><span class=p>);</span>
+</span></span><span class=line><span class=cl><span class=p>...</span>
+</span></span><span class=line><span class=cl><span class=kt>int</span> <span class=n>x</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=p>...</span>
+</span></span><span class=line><span class=cl><span class=n>f</span><span class=p>(</span><span class=mi>10</span><span class=p>);</span>                           <span class=c1>// invoke f on rvalue
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=n>f</span><span class=p>(</span><span class=n>x</span><span class=p>);</span>                            <span class=c1>// invoke f on lvalue
+</span></span></span></code></pre></td></tr></table></div></div><p>此时对于<code>f(10)</code>来说，T被推导为<code>int</code>，也就是<code>void f(int&& param)</code>，但是对于<code>f(x)</code>，根据万能引用规则，T被推导为<code>int&</code> ，也就是<code>void f(int& && param)</code>，<code>& &&</code> 这样的引用声明看上去并不合法；为了解决这个问题，C++标准引入了引用折叠的概念</p><blockquote><p>It is permitted to form references to references through type manipulations in templates or typedefs, in which case the <em>reference collapsing</em> rules apply: rvalue reference to rvalue reference collapses to rvalue reference, all other combinations form lvalue reference:</p></blockquote><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span><span class=lnt>7
+</span><span class=lnt>8
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-cpp data-lang=cpp><span class=line><span class=cl><span class=k>typedef</span> <span class=kt>int</span><span class=o>&amp;</span>  <span class=n>lref</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=k>typedef</span> <span class=kt>int</span><span class=o>&amp;&amp;</span> <span class=n>rref</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=kt>int</span> <span class=n>n</span><span class=p>;</span>
+</span></span><span class=line><span class=cl> 
+</span></span><span class=line><span class=cl><span class=n>lref</span><span class=o>&amp;</span>  <span class=n>r1</span> <span class=o>=</span> <span class=n>n</span><span class=p>;</span> <span class=c1>// type of r1 is int&amp;
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=n>lref</span><span class=o>&amp;&amp;</span> <span class=n>r2</span> <span class=o>=</span> <span class=n>n</span><span class=p>;</span> <span class=c1>// type of r2 is int&amp;
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=n>rref</span><span class=o>&amp;</span>  <span class=n>r3</span> <span class=o>=</span> <span class=n>n</span><span class=p>;</span> <span class=c1>// type of r3 is int&amp;
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=n>rref</span><span class=o>&amp;&amp;</span> <span class=n>r4</span> <span class=o>=</span> <span class=mi>1</span><span class=p>;</span> <span class=c1>// type of r4 is int&amp;&amp;
+</span></span></span></code></pre></td></tr></table></div></div><p>至此，万能引用的类型推断就变的合法了</p><p>Reference：</p><p><a class=link href=https://isocpp.org/blog/2012/11/universal-references-in-c11-scott-meyers#NittyGrittyDetails target=_blank rel=noopener>Universal References in C++11 &ndash; Scott Meyers : Standard C++</a></p><p><a class=link href=https://en.cppreference.com/w/cpp/language/reference target=_blank rel=noopener>Reference declaration - cppreference.com</a></p><h2 id=常见误区->常见误区 🌟</h2><h3 id=某个变量的类型是左值右值>某个变量的类型是左值右值</h3><blockquote><p>Every C++ expression has a type, and belongs to a <em>value category</em>. The value categories are the basis for rules that compilers must follow when creating, copying, and moving temporary objects during expression evaluation.</p></blockquote><p>左值右值不是一种类型，而是<em>value category</em>，通常是用于帮助编译器选择如何对一个对象进行创建/赋值/移动</p><blockquote><p>the lvalueness or rvalueness of an expression is independent of its type. Consider the type <code>int</code>.  There are lvalues of type <code>int</code> (e.g., variables declared to be <code>int</code>), and there are rvalues of type <code>int</code> (e.g., literals like <code>10</code>).</p></blockquote><h3 id=使用右值引用一定可以减少内存拷贝>使用右值引用一定可以减少内存拷贝</h3><p>严格意义上讲，减少内存拷贝的是移动语义，而不是右值引用；右值引用的目的是为了实现移动语义，但是使用右值引用不代表就实现了移动语义</p><blockquote><p>如果没有实现移动构造和移动赋值会发生什么？</p></blockquote><p>如果一个类没有实现移动构造和移动赋值，但使用了移动语义，那么move会退化成copy；需要注意在一些情况下编译器会生成默认移动构造和默认移动赋值函数</p><h3 id=左值引用类型的变量是左值右值引用类型的变量是右值函数的参数为左值右值引用类型他们在函数体中就是左值右值>左值引用类型的变量是左值，右值引用类型的变量是右值；函数的参数为左值/右值引用类型，他们在函数体中就是左值/右值</h3><blockquote><p>The compiler treats a named rvalue reference as an lvalue and an unnamed rvalue reference as an rvalue</p></blockquote><p>左值右值和类型是独立的概念，一个右值引用类型的变量可以是左值，将右值引用作为参数的函数会将该参数视为函数体中的左值；一个右值引用类型的变量也可以是右值，比如<code>print(forward&lt;int>(x))</code>的结果为<code>print(int &&)</code>，int &&为临时变量，故为右值</p><p>具体见下面的例子：</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span><span class=lnt>35
+</span><span class=lnt>36
+</span><span class=lnt>37
+</span><span class=lnt>38
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-cpp data-lang=cpp><span class=line><span class=cl><span class=k>template</span><span class=o>&lt;</span><span class=k>typename</span> <span class=n>T</span><span class=o>&gt;</span>
+</span></span><span class=line><span class=cl><span class=kt>void</span> <span class=n>print</span><span class=p>(</span><span class=n>T</span><span class=o>&amp;</span> <span class=n>t</span><span class=p>){</span>
+</span></span><span class=line><span class=cl>    <span class=n>cout</span> <span class=o>&lt;&lt;</span> <span class=s>&#34;lvalue&#34;</span> <span class=o>&lt;&lt;</span> <span class=n>endl</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span><span class=line><span class=cl><span class=k>template</span><span class=o>&lt;</span><span class=k>typename</span> <span class=n>T</span><span class=o>&gt;</span>
+</span></span><span class=line><span class=cl><span class=kt>void</span> <span class=n>print</span><span class=p>(</span><span class=n>T</span><span class=o>&amp;&amp;</span> <span class=n>t</span><span class=p>){</span>
+</span></span><span class=line><span class=cl>    <span class=n>cout</span> <span class=o>&lt;&lt;</span> <span class=s>&#34;rvalue&#34;</span> <span class=o>&lt;&lt;</span> <span class=n>endl</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=k>template</span><span class=o>&lt;</span><span class=k>typename</span> <span class=n>T</span><span class=o>&gt;</span>
+</span></span><span class=line><span class=cl><span class=kt>void</span> <span class=n>TestForward</span><span class=p>(</span><span class=n>T</span><span class=o>&amp;&amp;</span> <span class=n>v</span><span class=p>){</span>
+</span></span><span class=line><span class=cl>    <span class=n>print</span><span class=p>(</span><span class=n>v</span><span class=p>);</span> <span class=c1>// 任何的函数内部，对形参的直接使用，都是按照左值进行的
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=n>print</span><span class=p>(</span><span class=n>std</span><span class=o>::</span><span class=n>forward</span><span class=o>&lt;</span><span class=n>T</span><span class=o>&gt;</span><span class=p>(</span><span class=n>v</span><span class=p>));</span>
+</span></span><span class=line><span class=cl>    <span class=n>print</span><span class=p>(</span><span class=n>std</span><span class=o>::</span><span class=n>move</span><span class=p>(</span><span class=n>v</span><span class=p>));</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kt>int</span> <span class=nf>main</span><span class=p>(){</span>
+</span></span><span class=line><span class=cl>    <span class=n>TestForward</span><span class=p>(</span><span class=mi>1</span><span class=p>);</span> <span class=c1>// int &amp;&amp; -&gt; int &amp;&amp; ，T为int，v是右值引用类型
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=kt>int</span> <span class=n>x</span> <span class=o>=</span> <span class=mi>1</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=n>TestForward</span><span class=p>(</span><span class=n>x</span><span class=p>);</span> <span class=c1>// int&amp; &amp;&amp; -&gt; int &amp;，T为int&amp;，v是左值引用类型
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=n>TestForward</span><span class=p>(</span><span class=n>std</span><span class=o>::</span><span class=n>forward</span><span class=o>&lt;</span><span class=kt>int</span><span class=o>&gt;</span><span class=p>(</span><span class=n>x</span><span class=p>));</span> <span class=c1>// int &amp;&amp; -&gt; int &amp;&amp;，T为int，v是右值引用类型
+</span></span></span><span class=line><span class=cl><span class=c1></span>		<span class=c1>// forward&lt;int&gt;(x)得到的是临时变量，类型为int &amp;&amp;，进入TestForward, T为int
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=k>return</span> <span class=mi>0</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span><span class=line><span class=cl><span class=cm>/* 
+</span></span></span><span class=line><span class=cl><span class=cm>Output：
+</span></span></span><span class=line><span class=cl><span class=cm>lvalue
+</span></span></span><span class=line><span class=cl><span class=cm>rvalue
+</span></span></span><span class=line><span class=cl><span class=cm>rvalue
+</span></span></span><span class=line><span class=cl><span class=cm>
+</span></span></span><span class=line><span class=cl><span class=cm>lvalue
+</span></span></span><span class=line><span class=cl><span class=cm>lvalue
+</span></span></span><span class=line><span class=cl><span class=cm>rvalue
+</span></span></span><span class=line><span class=cl><span class=cm>
+</span></span></span><span class=line><span class=cl><span class=cm>lvalue
+</span></span></span><span class=line><span class=cl><span class=cm>rvalue
+</span></span></span><span class=line><span class=cl><span class=cm>rvalue
+</span></span></span><span class=line><span class=cl><span class=cm>*/</span>
+</span></span></code></pre></td></tr></table></div></div><blockquote><p>Written by Jiacheng Hu, at Zhejiang University, Hangzhou, China.</p></blockquote></section><footer class=article-footer><section class=article-tags><a href=/tags/c++/>C++</a>
+<a href=/tags/technology/>Technology</a></section><section class=article-copyright><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-copyright" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><path d="M14.5 9a3.5 4 0 100 6"/></svg><span>Licensed under CC BY-NC-SA 4.0</span></section></footer></article><aside class=related-content--wrapper><h2 class=section-title>Related content</h2><div class=related-content><div class="flex article-list--tile"><article class=has-image><a href=/p/cpp-understand-initializer-list/><div class=article-image><img src=/p/cpp-understand-initializer-list/cover.bf953ed90bccb82e12fee7184a53dc67_hu6170f1f82b3711c204643e7d26f97db9_36645_250x150_fill_box_smart1_3.png width=250 height=150 loading=lazy alt="Featured image of post 理解初始化列表" data-key=cpp-understand-initializer-list data-hash="md5-v5U+2QvMuC4S/ucYSlPcZw=="></div><div class=article-details><h2 class=article-title>理解初始化列表</h2></div></a></article><article class=has-image><a href=/p/cpp-stl-iterator-and-function-object/><div class=article-image><img src=/p/cpp-stl-iterator-and-function-object/cover.bf953ed90bccb82e12fee7184a53dc67_hu6170f1f82b3711c204643e7d26f97db9_36645_250x150_fill_box_smart1_3.png width=250 height=150 loading=lazy alt="Featured image of post （转载）理解 STL——迭代器和函数对象" data-key=cpp-STL-iterator-and-function-object data-hash="md5-v5U+2QvMuC4S/ucYSlPcZw=="></div><div class=article-details><h2 class=article-title>（转载）理解 STL——迭代器和函数对象</h2></div></a></article><article class=has-image><a href=/p/cpp-emplace_back-vs-push_back/><div class=article-image><img src=/p/cpp-emplace_back-vs-push_back/cover.bf953ed90bccb82e12fee7184a53dc67_hu6170f1f82b3711c204643e7d26f97db9_36645_250x150_fill_box_smart1_3.png width=250 height=150 loading=lazy alt="Featured image of post 理解 push_back ｜ emplace_back" data-key=cpp-emplace_back-vs-push_back data-hash="md5-v5U+2QvMuC4S/ucYSlPcZw=="></div><div class=article-details><h2 class=article-title>理解 push_back ｜ emplace_back</h2></div></a></article><article class=has-image><a href=/p/understand-copy-elision/><div class=article-image><img src=/p/understand-copy-elision/cover.bf953ed90bccb82e12fee7184a53dc67_hu6170f1f82b3711c204643e7d26f97db9_36645_250x150_fill_box_smart1_3.png width=250 height=150 loading=lazy alt="Featured image of post 理解 Copy Elision" data-key=understand-copy-elision data-hash="md5-v5U+2QvMuC4S/ucYSlPcZw=="></div><div class=article-details><h2 class=article-title>理解 Copy Elision</h2></div></a></article><article class=has-image><a href=/p/understand-kmp/><div class=article-image><img src=/p/understand-kmp/cover.206a928a9d12af37c650c61b06c81f34_hu5d3189b976991bbaa97ead5a2f977361_753368_250x150_fill_box_smart1_3.png width=250 height=150 loading=lazy alt="Featured image of post 理解 KMP 算法" data-key=understand-kmp data-hash="md5-IGqSip0SrzfGUMYbBsgfNA=="></div><div class=article-details><h2 class=article-title>理解 KMP 算法</h2></div></a></article></div></div></aside><div class=disqus-container><div id=disqus_thread></div><script type=application/javascript>window.disqus_config=function(){},function(){if(["localhost","127.0.0.1"].indexOf(window.location.hostname)!=-1){document.getElementById("disqus_thread").innerHTML="Disqus comments not available by default when the website is previewed locally.";return}var t=document,e=t.createElement("script");e.async=!0,e.src="//hugo-theme-stack.disqus.com/embed.js",e.setAttribute("data-timestamp",+new Date),(t.head||t.body).appendChild(e)}()</script><noscript>Please enable JavaScript to view the <a href=https://disqus.com/?ref_noscript>comments powered by Disqus.</a></noscript><a href=https://disqus.com class=dsq-brlink>comments powered by <span class=logo-disqus>Disqus</span></a></div><style>.disqus-container{background-color:var(--card-background);border-radius:var(--card-border-radius);box-shadow:var(--shadow-l1);padding:var(--card-padding)}</style><script>window.addEventListener("onColorSchemeChange",e=>{typeof DISQUS=="object"&&DISQUS.reset({reload:!0})})</script><footer class=site-footer><section class=copyright>&copy;
+2020 -
+2023 Jiacheng Hu</section><section class=powerby>Built with <a href=https://gohugo.io/ target=_blank rel=noopener>Hugo</a><br>Theme <b><a href=https://github.com/CaiJimmy/hugo-theme-stack target=_blank rel=noopener data-version=3.20.0>Stack</a></b> designed by <a href=https://jimmycai.com target=_blank rel=noopener>Jimmy</a></section></footer><div class=pswp tabindex=-1 role=dialog aria-hidden=true><div class=pswp__bg></div><div class=pswp__scroll-wrap><div class=pswp__container><div class=pswp__item></div><div class=pswp__item></div><div class=pswp__item></div></div><div class="pswp__ui pswp__ui--hidden"><div class=pswp__top-bar><div class=pswp__counter></div><button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+<button class="pswp__button pswp__button--share" title=Share></button>
+<button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+<button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button><div class=pswp__preloader><div class=pswp__preloader__icn><div class=pswp__preloader__cut><div class=pswp__preloader__donut></div></div></div></div></div><div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap"><div class=pswp__share-tooltip></div></div><button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)"></button>
+<button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)"></button><div class=pswp__caption><div class=pswp__caption__center></div></div></div></div></div><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo=" crossorigin=anonymous defer></script><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU=" crossorigin=anonymous defer></script><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css crossorigin=anonymous><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css crossorigin=anonymous></main></div><script src=https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z+KMkF24hUW8WePSA9HM=" crossorigin=anonymous></script><script type=text/javascript src=/ts/main.js defer></script>
+<script>(function(){const e=document.createElement("link");e.href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap",e.type="text/css",e.rel="stylesheet",document.head.appendChild(e)})()</script></body></html>

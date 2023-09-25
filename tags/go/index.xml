@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Go on Jiacheng Hu</title><link>https://unicocn.github.io/tags/go/</link><description>Recent content in Go on Jiacheng Hu</description><generator>Hugo -- gohugo.io</generator><language>en</language><lastBuildDate>Wed, 07 Jun 2023 23:50:00 +0000</lastBuildDate><atom:link href="https://unicocn.github.io/tags/go/index.xml" rel="self" type="application/rss+xml"/><item><title>Go语言学习路线</title><link>https://unicocn.github.io/p/go/</link><pubDate>Wed, 07 Jun 2023 23:50:00 +0000</pubDate><guid>https://unicocn.github.io/p/go/</guid><description>&lt;img src="https://unicocn.github.io/p/go/cover.png" alt="Featured image of post Go语言学习路线" />&lt;h1 id="如何学习golang">如何学习Golang&lt;/h1>
+&lt;h2 id="快速入门">快速入门：&lt;/h2>
+&lt;p>&lt;a class="link" href="https://gobyexample-cn.github.io/" target="_blank" rel="noopener"
+>Go by Example 中文版&lt;/a>&lt;/p>
+&lt;h2 id="小项目">小项目：&lt;/h2>
+&lt;p>&lt;a class="link" href="https://geektutu.com/post/geecache.html" target="_blank" rel="noopener"
+>7天用Go从零实现分布式缓存GeeCache&lt;/a>&lt;/p>
+&lt;h2 id="go语言设计与实现">Go语言设计与实现：&lt;/h2>
+&lt;p>&lt;a class="link" href="https://draveness.me/golang/" target="_blank" rel="noopener"
+>Go 语言设计与实现&lt;/a>&lt;/p>
+&lt;h2 id="go语言圣经">Go语言圣经：&lt;/h2>
+&lt;p>&lt;a class="link" href="https://books.studygolang.com/gopl-zh/" target="_blank" rel="noopener"
+>Go语言圣经&lt;/a>&lt;/p>
+&lt;h2 id="go学习路线">Go学习路线：&lt;/h2>
+&lt;p>&lt;a class="link" href="https://bytedance.feishu.cn/docs/doccn3SFTuFIAVr4CDZGx48KKdd" target="_blank" rel="noopener"
+>字节跳动Go语言学习路线图&lt;/a>&lt;/p>
+&lt;p>&lt;img src="https://unicocn.github.io/p/go/image.png"
+width="1780"
+height="3554"
+srcset="https://unicocn.github.io/p/go/image_hu1882c3e30b21b887ef786af277929308_1214505_480x0_resize_box_3.png 480w, https://unicocn.github.io/p/go/image_hu1882c3e30b21b887ef786af277929308_1214505_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="how to learn go"
+class="gallery-image"
+data-flex-grow="50"
+data-flex-basis="120px"
+>&lt;/p>
+&lt;blockquote>
+&lt;p>Written by Jiacheng Hu, at Zhejiang University, Hangzhou, China.&lt;/p>
+&lt;/blockquote></description></item></channel></rss>

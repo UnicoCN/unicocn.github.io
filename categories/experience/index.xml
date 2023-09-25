@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Experience on Jiacheng Hu</title><link>https://unicocn.github.io/categories/experience/</link><description>Recent content in Experience on Jiacheng Hu</description><generator>Hugo -- gohugo.io</generator><language>en</language><lastBuildDate>Tue, 13 Jun 2023 12:00:00 +0000</lastBuildDate><atom:link href="https://unicocn.github.io/categories/experience/index.xml" rel="self" type="application/rss+xml"/><item><title>生产力提高指南 —— ChatGPT使用手册</title><link>https://unicocn.github.io/p/chatgpt-tutorial/</link><pubDate>Tue, 13 Jun 2023 12:00:00 +0000</pubDate><guid>https://unicocn.github.io/p/chatgpt-tutorial/</guid><description>&lt;img src="https://unicocn.github.io/p/chatgpt-tutorial/cover.jpg" alt="Featured image of post 生产力提高指南 —— ChatGPT使用手册" />&lt;h1 id="chatgpt-使用手册持续更新">ChatGPT 使用手册（持续更新）&lt;/h1>
+&lt;blockquote>
+&lt;p>ChatGPT正在改变这个世界，对于身处时代剧变中的个体，利用好这个强大的AI助手，可以极大地提高自身学习效率和生产力 &lt;br>
+本文受@&lt;a class="link" href="https://space.bilibili.com/277830177" target="_blank" rel="noopener"
+>西西弗斯没问题&lt;/a> 启发，部分内容参考了&lt;a class="link" href="https://k5ms77k0o1.feishu.cn/wiki/wikcnJyI9wsyjyBc8xiDgv0cY8b" target="_blank" rel="noopener"
+>玩转ChatGPT&lt;/a>&lt;/p>
+&lt;/blockquote>
+&lt;h2 id="chatgpt使用渠道">ChatGPT使用渠道&lt;/h2>
+&lt;blockquote>
+&lt;p>使用ChatGPT的必备技能：科学上网&lt;/p>
+&lt;/blockquote>
+&lt;h3 id="网站">网站&lt;/h3>
+&lt;h3 id="api">API&lt;/h3>
+&lt;h3 id="应用软件">应用软件&lt;/h3>
+&lt;h3 id="浏览器插件">浏览器插件&lt;/h3>
+&lt;h2 id="如何写出更好的prompt">如何写出更好的prompt&lt;/h2>
+&lt;h3 id="chatgpt-prompt-engineering-for-developers-by-andrew-ng">ChatGPT Prompt Engineering for Developers By Andrew Ng&lt;/h3>
+&lt;p>&lt;a class="link" href="https://www.deeplearning.ai/short-courses/chatgpt-prompt-engineering-for-developers/" target="_blank" rel="noopener"
+>Link: ChatGPT Prompt Engineering for Developers&lt;/a>&lt;/p>
+&lt;h2 id="效率up-up">效率Up Up!&lt;/h2>
+&lt;h3 id="学习">学习&lt;/h3>
+&lt;h4 id="场景一制作ppt">场景一：制作PPT&lt;/h4>
+&lt;ul>
+&lt;li>
+&lt;p>工具推荐&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>使用指南&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;h4 id="场景二作业答疑">场景二：作业答疑&lt;/h4>
+&lt;ul>
+&lt;li>
+&lt;p>工具推荐&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>使用指南&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;h4 id="场景三撰写课程论文">场景三：撰写课程论文&lt;/h4>
+&lt;ul>
+&lt;li>
+&lt;p>工具推荐&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>使用指南&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;h3 id="科研">科研&lt;/h3>
+&lt;h4 id="场景一快速阅读论文">场景一：快速阅读论文&lt;/h4>
+&lt;ul>
+&lt;li>
+&lt;p>工具推荐&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>使用指南&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;h4 id="场景二论文翻译">场景二：论文翻译&lt;/h4>
+&lt;ul>
+&lt;li>
+&lt;p>工具推荐&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>使用指南&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;h3 id="英语">英语&lt;/h3>
+&lt;h4 id="场景一练习口语">场景一：练习口语&lt;/h4>
+&lt;ul>
+&lt;li>
+&lt;p>工具推荐&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>使用指南&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;h4 id="场景二纠正语法">场景二：纠正语法&lt;/h4>
+&lt;ul>
+&lt;li>
+&lt;p>工具推荐&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>使用指南&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;h4 id="场景三情境写作">场景三：情境写作&lt;/h4>
+&lt;ul>
+&lt;li>
+&lt;p>工具推荐&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>使用指南&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;h4 id="场景四文章美化">场景四：文章美化&lt;/h4>
+&lt;ul>
+&lt;li>
+&lt;p>工具推荐&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>使用指南&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;h3 id="面试">面试&lt;/h3>
+&lt;h4 id="场景一撰写自我介绍">场景一：撰写自我介绍&lt;/h4>
+&lt;ul>
+&lt;li>
+&lt;p>工具推荐&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>使用指南&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;h4 id="场景二了解岗位要求">场景二：了解岗位要求&lt;/h4>
+&lt;ul>
+&lt;li>
+&lt;p>工具推荐&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>使用指南&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;h4 id="场景三辅助面试复盘">场景三：辅助面试复盘&lt;/h4>
+&lt;ul>
+&lt;li>
+&lt;p>工具推荐&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>使用指南&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;h3 id="工作">工作&lt;/h3>
+&lt;h4 id="场景一报告撰写">场景一：报告撰写&lt;/h4>
+&lt;ul>
+&lt;li>
+&lt;p>工具推荐&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>使用指南&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;h4 id="场景二职业规划">场景二：职业规划&lt;/h4>
+&lt;ul>
+&lt;li>
+&lt;p>工具推荐&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>使用指南&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;h3 id="生活">生活&lt;/h3>
+&lt;h4 id="场景一生活常识">场景一：生活常识&lt;/h4>
+&lt;ul>
+&lt;li>
+&lt;p>工具推荐&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>使用指南&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;h4 id="场景二日常饮食">场景二：日常饮食&lt;/h4>
+&lt;ul>
+&lt;li>
+&lt;p>工具推荐&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>使用指南&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;h4 id="场景三旅游规划">场景三：旅游规划&lt;/h4>
+&lt;ul>
+&lt;li>
+&lt;p>工具推荐&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>使用指南&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;h2 id="资源推荐">资源推荐&lt;/h2>
+&lt;ul>
+&lt;li>[视频教程] &lt;a class="link" href="https://www.bilibili.com/video/BV1jM4y1t7Ha" target="_blank" rel="noopener"
+>你真的会用ChatGPT了吗？「建议收藏」20分钟学完ChatGPT的正确使用方式｜释放你的十倍生产力&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;div class="video-wrapper">
+&lt;iframe src="https://player.bilibili.com/player.html?as_wide=1&amp;amp;high_quality=1&amp;amp;page=1&amp;bvid=BV1jM4y1t7Ha"
+scrolling="no"
+frameborder="no"
+framespacing="0"
+allowfullscreen="true"
+>
+&lt;/iframe>
+&lt;/div>
+&lt;h2 id="reference">Reference&lt;/h2>
+&lt;p>&lt;a class="link" href="https://k5ms77k0o1.feishu.cn/wiki/wikcnJyI9wsyjyBc8xiDgv0cY8b" target="_blank" rel="noopener"
+>玩转ChatGPT&lt;/a>&lt;/p>
+&lt;blockquote>
+&lt;p>Written by Jiacheng Hu, at Zhejiang University, Hangzhou, China.&lt;/p>
+&lt;/blockquote></description></item></channel></rss>
