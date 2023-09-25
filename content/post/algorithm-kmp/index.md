@@ -20,9 +20,10 @@ tags:
 
 KMP(Knuth-Morris-Pratt)算法可以实现在O(n+m)的时间复杂度下找出字符串p在字符串s中出现的所有位置。
 
-## 原理(To be done)
+## 原理
 
 ![KMP Algorithm](kmp.png)
+
 
 ## 代码实现
 ### 下标从0开始
